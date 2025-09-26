@@ -9,6 +9,10 @@ const currentInfo = document.getElementById('current-info');
 let currentVideoUrl = null;
 let playbackUpdateInterval = null;
 
+// MSE player instance for HD playback
+let msePlayer = null;
+const useHDMode = true; // Enable HD mode by default
+
 // Initialize
 document.addEventListener('DOMContentLoaded', () => {
   setupConnection();
@@ -74,8 +78,8 @@ async function setupQRCode() {
       text: networkUrl,
       width: 150,
       height: 150,
-      colorDark: "#000000",
-      colorLight: "#ffffff",
+      colorDark: '#000000',
+      colorLight: '#ffffff',
       correctLevel: QRCode.CorrectLevel.H
     });
 
@@ -97,8 +101,8 @@ async function setupQRCode() {
         text: localUrl,
         width: 150,
         height: 150,
-        colorDark: "#000000",
-        colorLight: "#ffffff",
+        colorDark: '#000000',
+        colorLight: '#ffffff',
         correctLevel: QRCode.CorrectLevel.H
       });
     }
@@ -270,7 +274,13 @@ async function loadVideo(song, isPlaying = true) {
   videoPlayer.load(); // Reset the video element
 
   try {
-    const response = await fetch(`/api/video/${song.videoId}`);
+    // Clean up existing MSE player if any
+    if (msePlayer) {
+      msePlayer.destroy();
+      msePlayer = null;
+    }
+
+    const response = await fetch(`/api/video/${song.videoId}?hd=${useHDMode}`);
     const videoInfo = await response.json();
 
     currentVideoUrl = { ...videoInfo, videoId: song.videoId };
@@ -306,38 +316,69 @@ async function loadVideo(song, isPlaying = true) {
       }
     };
 
-    // Set src first
-    console.log('Setting video src, readyState:', videoPlayer.readyState);
-    videoPlayer.src = videoInfo.url;
-    videoPlayer.style.display = 'block';
-    noVideoDiv.style.display = 'none';
-    currentInfo.style.display = 'flex';
+    // Use MSE player for HD mode if available
+    if (useHDMode && videoInfo.hdMode && videoInfo.videoUrl && videoInfo.audioUrl) {
+      console.log('Using MSE player for HD playback');
 
-    // Force load to start
-    videoPlayer.load();
+      videoPlayer.style.display = 'block';
+      noVideoDiv.style.display = 'none';
+      currentInfo.style.display = 'flex';
 
-    // Try to play immediately
-    setTimeout(() => tryAutoplay(), 100);
+      msePlayer = new MSEPlayer(videoPlayer);
 
-    // Listen for when video is ready
-    videoPlayer.addEventListener('loadedmetadata', () => {
-      console.log('Video metadata loaded, readyState:', videoPlayer.readyState);
-      tryAutoplay();
-    }, { once: true });
+      // Use proxy endpoints for streaming
+      const videoStreamUrl = `/api/stream/video/${song.videoId}`;
+      const audioStreamUrl = `/api/stream/audio/${song.videoId}`;
 
-    // Also try playing when video can play
-    videoPlayer.addEventListener('canplay', () => {
-      console.log('Video can play, readyState:', videoPlayer.readyState);
-      tryAutoplay();
-    }, { once: true });
+      await msePlayer.load(videoStreamUrl, audioStreamUrl);
 
-    console.log('Video src set, checking readyState:', videoPlayer.readyState);
+      // For MSE player, trigger play directly
+      if (isPlaying) {
+        videoPlayer.muted = true;
+        msePlayer.play().then(() => {
+          console.log('MSE autoplay successful, unmuting...');
+          setTimeout(() => {
+            videoPlayer.muted = false;
+          }, 100);
+        }).catch(e => {
+          console.error('MSE autoplay failed:', e);
+          videoPlayer.muted = false;
+        });
+      }
+    } else {
+      // Standard playback
+      console.log('Using standard player, readyState:', videoPlayer.readyState);
+      videoPlayer.src = videoInfo.url || videoInfo.url;
+      videoPlayer.style.display = 'block';
+      noVideoDiv.style.display = 'none';
+      currentInfo.style.display = 'flex';
 
-    // If video is already ready, try to play immediately
-    if (videoPlayer.readyState >= 2) {
-      console.log('Video already ready, attempting autoplay');
-      tryAutoplay();
-    }
+      // Force load to start
+      videoPlayer.load();
+
+      // Try to play immediately
+      setTimeout(() => tryAutoplay(), 100);
+
+      // Listen for when video is ready
+      videoPlayer.addEventListener('loadedmetadata', () => {
+        console.log('Video metadata loaded, readyState:', videoPlayer.readyState);
+        tryAutoplay();
+      }, { once: true });
+
+      // Also try playing when video can play
+      videoPlayer.addEventListener('canplay', () => {
+        console.log('Video can play, readyState:', videoPlayer.readyState);
+        tryAutoplay();
+      }, { once: true });
+
+      console.log('Video src set, checking readyState:', videoPlayer.readyState);
+
+      // If video is already ready, try to play immediately
+      if (videoPlayer.readyState >= 2) {
+        console.log('Video already ready, attempting autoplay');
+        tryAutoplay();
+      }
+    } // Close else block for standard playback
   } catch (error) {
     console.error('Failed to load video:', error);
     // Skip to next on error

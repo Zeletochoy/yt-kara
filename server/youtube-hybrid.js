@@ -235,7 +235,7 @@ class YouTubeService {
 
       return videos;
     } catch (error) {
-      console.error(`yt-dlp search failed:`, error.message);
+      console.error('yt-dlp search failed:', error.message);
       return [];
     }
   }
@@ -262,7 +262,7 @@ class YouTubeService {
 
       return videos;
     } catch (error) {
-      console.error(`YouTube.js search failed:`, error.message);
+      console.error('YouTube.js search failed:', error.message);
       return [];
     }
   }

@@ -243,7 +243,7 @@ function getRelativeTime(timestamp) {
 let draggedItem = null;
 let draggedIndex = null;
 let touchItem = null;
-let touchOffset = { x: 0, y: 0 };
+const touchOffset = { x: 0, y: 0 };
 let placeholder = null;
 
 function setupQueueDragDrop() {
@@ -273,25 +273,6 @@ function setupQueueDragDrop() {
         queueListEl.insertBefore(draggedItem, afterElement);
       }
     });
-  });
-
-  // Add drop listener to the queue list itself for dropping at the end
-  queueListEl.addEventListener('dragover', (e) => {
-    e.preventDefault();
-    e.dataTransfer.dropEffect = 'move';
-  });
-
-  queueListEl.addEventListener('drop', (e) => {
-    e.preventDefault();
-    if (draggedItem && draggedIndex !== null) {
-      // Find the new position based on where the item was dropped
-      const allItems = Array.from(queueListEl.querySelectorAll('.queue-item'));
-      const newIndex = allItems.indexOf(draggedItem);
-      if (newIndex !== -1 && newIndex !== draggedIndex) {
-        wsConnection.reorderQueue(draggedIndex, newIndex);
-      }
-    }
-  });
 
     // Mobile touch events
     const handle = item.querySelector('.drag-handle');
@@ -322,6 +303,24 @@ function setupQueueDragDrop() {
         // Insert placeholder
         item.parentNode.insertBefore(placeholder, item.nextSibling);
       });
+    }
+  });
+
+  // Add drop listener to the queue list itself for dropping at the end
+  queueListEl.addEventListener('dragover', (e) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+  });
+
+  queueListEl.addEventListener('drop', (e) => {
+    e.preventDefault();
+    if (draggedItem && draggedIndex !== null) {
+      // Find the new position based on where the item was dropped
+      const allItems = Array.from(queueListEl.querySelectorAll('.queue-item'));
+      const newIndex = allItems.indexOf(draggedItem);
+      if (newIndex !== -1 && newIndex !== draggedIndex) {
+        wsConnection.reorderQueue(draggedIndex, newIndex);
+      }
     }
   });
 }

@@ -76,86 +76,88 @@ function setupWebSocket(wss) {
 
 async function handleMessage(wss, ws, clientId, message) {
   switch (message.type) {
-    case 'SEARCH':
-      const results = await youtube.search(message.query);
-      ws.send(JSON.stringify({
-        type: 'SEARCH_RESULTS',
-        results
-      }));
-      break;
+  case 'SEARCH': {
+    const results = await youtube.search(message.query);
+    ws.send(JSON.stringify({
+      type: 'SEARCH_RESULTS',
+      results
+    }));
+    break;
+  }
 
-    case 'ADD_SONG':
-      // Message should contain the full song info from search results
-      if (message.song) {
-        state.addSong(message.song, clientId);
+  case 'ADD_SONG':
+    // Message should contain the full song info from search results
+    if (message.song) {
+      state.addSong(message.song, clientId);
 
-        // If no song is playing, start playing
-        if (!state.currentSong) {
-          state.playNext();
-        }
-
-        broadcastState(wss);
+      // If no song is playing, start playing
+      if (!state.currentSong) {
+        state.playNext();
       }
-      break;
 
-    case 'REMOVE_SONG':
-      state.removeSong(message.queueId);
       broadcastState(wss);
-      break;
+    }
+    break;
 
-    case 'REORDER_QUEUE':
-      state.reorderQueue(message.fromIndex, message.toIndex);
-      broadcastState(wss);
-      break;
+  case 'REMOVE_SONG':
+    state.removeSong(message.queueId);
+    broadcastState(wss);
+    break;
 
-    case 'SKIP_SONG':
-      state.playNext();
-      broadcastState(wss);
-      break;
+  case 'REORDER_QUEUE':
+    state.reorderQueue(message.fromIndex, message.toIndex);
+    broadcastState(wss);
+    break;
 
-    case 'PREVIOUS_SONG':
-      state.playPrevious();
-      broadcastState(wss);
-      break;
+  case 'SKIP_SONG':
+    state.playNext();
+    broadcastState(wss);
+    break;
 
-    case 'PLAY_PAUSE':
-      state.setPlayPause(message.isPlaying);
-      broadcastState(wss);
-      break;
+  case 'PREVIOUS_SONG':
+    state.playPrevious();
+    broadcastState(wss);
+    break;
 
-    case 'SEEK':
-      state.seek(message.time);
-      broadcast(wss, {
-        type: 'STATE_UPDATE',
-        state: state.getState(),
-        seekTo: message.time
-      });
-      break;
+  case 'PLAY_PAUSE':
+    state.setPlayPause(message.isPlaying);
+    broadcastState(wss);
+    break;
 
-    case 'PLAYBACK_UPDATE':
-      state.updatePlaybackTime(message.currentTime);
-      // Don't broadcast playback updates to avoid feedback loops
-      break;
+  case 'SEEK':
+    state.seek(message.time);
+    broadcast(wss, {
+      type: 'STATE_UPDATE',
+      state: state.getState(),
+      seekTo: message.time
+    });
+    break;
 
-    case 'UPDATE_NAME':
-      const clientName = message.name || '';
-      clientNames.set(clientId, clientName);
-      state.updateClientName(clientId, clientName);
-      broadcastState(wss);
-      break;
+  case 'PLAYBACK_UPDATE':
+    state.updatePlaybackTime(message.currentTime);
+    // Don't broadcast playback updates to avoid feedback loops
+    break;
 
-    case 'RESET_QUEUE':
-      state.resetQueue();
-      broadcastState(wss);
-      break;
+  case 'UPDATE_NAME': {
+    const clientName = message.name || '';
+    clientNames.set(clientId, clientName);
+    state.updateClientName(clientId, clientName);
+    broadcastState(wss);
+    break;
+  }
 
-    case 'RESET_HISTORY':
-      state.resetHistory();
-      broadcastState(wss);
-      break;
+  case 'RESET_QUEUE':
+    state.resetQueue();
+    broadcastState(wss);
+    break;
 
-    default:
-      console.warn(`Unknown message type: ${message.type}`);
+  case 'RESET_HISTORY':
+    state.resetHistory();
+    broadcastState(wss);
+    break;
+
+  default:
+    console.warn(`Unknown message type: ${message.type}`);
   }
 }
 

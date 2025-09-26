@@ -21,68 +21,123 @@ class YouTubeService {
     }
   }
 
-  async getVideoUrl(videoId) {
+  async getVideoUrl(videoId, hdMode = false) {
     // Check cache
-    const cached = this.urlCache.get(videoId);
+    const cacheKey = hdMode ? `${videoId}_hd` : videoId;
+    const cached = this.urlCache.get(cacheKey);
     if (cached && cached.expiresAt > Date.now()) {
       return cached;
     }
 
     try {
-      // Use yt-dlp to get video info AND the best format URL
-      // Format selection: prefer up to 1080p with audio, fallback to best available
       const url = `https://www.youtube.com/watch?v=${videoId}`;
 
-      // First get the direct URL with optimal format selection
-      // Try format 22 (720p mp4 with audio) first, then fallback to best available
-      const { stdout: urlOutput } = await execPromise(
-        `yt-dlp -f "22/best[height>=720]/best" --get-url --no-warnings "${url}"`,
-        {
-          maxBuffer: 10 * 1024 * 1024,
-          timeout: 30000
+      if (hdMode) {
+        // Get separate video and audio URLs for HD playback
+        console.log(`Getting HD streams for ${videoId}`);
+
+        // Get best video (up to 1080p) and best audio separately
+        const { stdout: videoUrlOutput } = await execPromise(
+          `yt-dlp -f "bestvideo[height<=720][ext=mp4]/bestvideo[height<=720]" --get-url --no-warnings "${url}"`,
+          {
+            maxBuffer: 10 * 1024 * 1024,
+            timeout: 30000
+          }
+        );
+
+        const { stdout: audioUrlOutput } = await execPromise(
+          `yt-dlp -f "bestaudio[ext=m4a]/bestaudio" --get-url --no-warnings "${url}"`,
+          {
+            maxBuffer: 10 * 1024 * 1024,
+            timeout: 30000
+          }
+        );
+
+        // Get video metadata
+        const { stdout: infoOutput } = await execPromise(
+          `yt-dlp -j --no-warnings "${url}"`,
+          {
+            maxBuffer: 10 * 1024 * 1024,
+            timeout: 30000
+          }
+        );
+
+        const info = JSON.parse(infoOutput);
+        const videoUrl = videoUrlOutput.trim();
+        const audioUrl = audioUrlOutput.trim();
+
+        if (!videoUrl || !audioUrl) {
+          throw new Error('No HD streams found');
         }
-      );
 
-      // Then get the video metadata
-      const { stdout: infoOutput } = await execPromise(
-        `yt-dlp -j --no-warnings "${url}"`,
-        {
-          maxBuffer: 10 * 1024 * 1024,
-          timeout: 30000
+        const videoInfo = {
+          videoUrl: videoUrl,  // Separate video URL
+          audioUrl: audioUrl,  // Separate audio URL
+          hdMode: true,
+          title: info.title || '',
+          thumbnail: info.thumbnail || '',
+          duration: info.duration || 0,
+          expiresAt: Date.now() + (2 * 60 * 60 * 1000) // 2 hours
+        };
+
+        // Cache the result
+        this.urlCache.set(cacheKey, videoInfo);
+
+        return videoInfo;
+      } else {
+        // Original mode - get combined video+audio for standard playback
+        // First get the direct URL with optimal format selection
+        // Try format 22 (720p mp4 with audio) first, then fallback to best available
+        const { stdout: urlOutput } = await execPromise(
+          `yt-dlp -f "22/best[height>=720]/best" --get-url --no-warnings "${url}"`,
+          {
+            maxBuffer: 10 * 1024 * 1024,
+            timeout: 30000
+          }
+        );
+
+        // Then get the video metadata
+        const { stdout: infoOutput } = await execPromise(
+          `yt-dlp -j --no-warnings "${url}"`,
+          {
+            maxBuffer: 10 * 1024 * 1024,
+            timeout: 30000
+          }
+        );
+
+        const info = JSON.parse(infoOutput);
+        const videoUrl = urlOutput.trim();
+
+        if (!videoUrl) {
+          throw new Error('No video URL found');
         }
-      );
 
-      const info = JSON.parse(infoOutput);
-      const videoUrl = urlOutput.trim();
+        const videoInfo = {
+          url: videoUrl,  // Use the URL from yt-dlp's format selection
+          hdMode: false,
+          title: info.title || '',
+          thumbnail: info.thumbnail || '',
+          duration: info.duration || 0,
+          expiresAt: Date.now() + (2 * 60 * 60 * 1000) // 2 hours
+        };
 
-      if (!videoUrl) {
-        throw new Error('No video URL found');
+        // Cache the result
+        this.urlCache.set(cacheKey, videoInfo);
+
+        // Clean old cache entries
+        if (this.urlCache.size > 100) {
+          const entries = Array.from(this.urlCache.entries());
+          entries.sort((a, b) => a[1].expiresAt - b[1].expiresAt);
+          this.urlCache.delete(entries[0][0]);
+        }
+
+        return videoInfo;
       }
-
-      const videoInfo = {
-        url: videoUrl,  // Use the URL from yt-dlp's format selection
-        title: info.title || '',
-        thumbnail: info.thumbnail || '',
-        duration: info.duration || 0,
-        expiresAt: Date.now() + (2 * 60 * 60 * 1000) // 2 hours
-      };
-
-      // Cache the result
-      this.urlCache.set(videoId, videoInfo);
-
-      // Clean old cache entries
-      if (this.urlCache.size > 100) {
-        const entries = Array.from(this.urlCache.entries());
-        entries.sort((a, b) => a[1].expiresAt - b[1].expiresAt);
-        this.urlCache.delete(entries[0][0]);
-      }
-
-      return videoInfo;
     } catch (error) {
       console.error(`Failed to get video URL for ${videoId}:`, error.message);
 
       // Clear from cache if it exists
-      this.urlCache.delete(videoId);
+      this.urlCache.delete(cacheKey);
 
       // Return error response
       return {
