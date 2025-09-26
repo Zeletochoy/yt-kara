@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>YT-Kara - Controller</title>
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <link rel="stylesheet" href="/css/client.css">
+</head>
+<body>
+  <div id="app">
+    <!-- Header -->
+    <header>
+      <h1><i class="fas fa-microphone"></i> YT-Kara</h1>
+      <div class="header-right">
+        <input type="text" id="user-name" placeholder="Your name" maxlength="20">
+        <div id="connection-status"></div>
+      </div>
+    </header>
+
+    <!-- Tab Navigation -->
+    <nav id="tabs">
+      <button class="tab active" data-tab="search" title="Search"><i class="fas fa-search"></i></button>
+      <button class="tab" data-tab="queue" title="Queue"><i class="fas fa-list"></i></button>
+      <button class="tab" data-tab="remote" title="Remote"><i class="fas fa-play-circle"></i></button>
+      <button class="tab" data-tab="history" title="History"><i class="fas fa-history"></i></button>
+    </nav>
+
+    <!-- Tab Content -->
+    <div id="tab-content">
+      <!-- Search Tab -->
+      <div id="search-tab" class="tab-panel active">
+        <div class="search-box">
+          <input type="text" id="search-input" placeholder="Search for songs..." title="Enter song name or artist">
+          <button id="search-btn" title="Search for karaoke songs on YouTube">Search</button>
+        </div>
+        <div class="search-hint">Tip: Songs will automatically include "karaoke" in the search</div>
+        <div id="search-results"></div>
+      </div>
+
+      <!-- Queue Tab -->
+      <div id="queue-tab" class="tab-panel">
+        <div id="current-song"></div>
+        <div id="queue-list"></div>
+      </div>
+
+      <!-- Remote Tab -->
+      <div id="remote-tab" class="tab-panel">
+        <div id="now-playing"></div>
+        <div id="playback-controls">
+          <div class="control-row">
+            <button class="control-btn" id="remote-previous" title="Previous song"><i class="fas fa-step-backward"></i></button>
+            <button class="control-btn large" id="remote-play-pause" title="Play/Pause"><i class="fas fa-play"></i></button>
+            <button class="control-btn" id="remote-skip" title="Skip to next song"><i class="fas fa-step-forward"></i></button>
+          </div>
+          <div class="control-row">
+            <button class="control-btn" id="remote-seek-back" title="Rewind 10 seconds"><i class="fas fa-undo"></i></button>
+            <button class="control-btn" id="remote-seek-forward" title="Forward 10 seconds"><i class="fas fa-redo"></i></button>
+          </div>
+        </div>
+      </div>
+
+      <!-- History Tab -->
+      <div id="history-tab" class="tab-panel">
+        <div id="history-list"></div>
+      </div>
+    </div>
+  </div>
+
+  <script src="/js/websocket.js"></script>
+  <script src="/js/client.js"></script>
+</body>
+</html>

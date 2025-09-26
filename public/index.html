@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>YT-Kara - Karaoke Player</title>
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <link rel="stylesheet" href="/css/karaoke.css">
+</head>
+<body>
+  <div id="app">
+    <!-- Video Player Section -->
+    <div id="video-container">
+      <video id="video-player" controls playsinline muted></video>
+      <div id="no-video" class="empty-state">
+        <h1><i class="fas fa-microphone fa-3x"></i></h1>
+        <p class="brand-title">YT-Kara</p>
+        <p>No song playing</p>
+        <p>Add songs from your phone!</p>
+      </div>
+    </div>
+
+    <!-- Queue Sidebar -->
+    <div id="sidebar">
+      <div id="connection-info">
+        <h3>Scan to Join</h3>
+        <div id="qr-code"></div>
+      </div>
+
+      <div id="queue-section">
+        <h3>Up Next</h3>
+        <div id="queue-list"></div>
+      </div>
+
+      <div id="admin-controls">
+        <button id="host-reset-queue" class="admin-btn" title="Clear all songs from the queue">
+          <i class="fas fa-trash"></i>
+          <span>Clear Queue</span>
+        </button>
+        <button id="host-reset-history" class="admin-btn" title="Clear the played songs history">
+          <i class="fas fa-broom"></i>
+          <span>Clear History</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Current Song Info -->
+    <div id="current-info">
+      <div id="song-title"></div>
+      <div id="progress-bar">
+        <div id="progress-fill"></div>
+      </div>
+      <div id="host-controls">
+        <button id="host-previous" class="control-btn" title="Go back to previous song"><i class="fas fa-step-backward"></i></button>
+        <button id="host-seek-back" class="control-btn" title="Rewind 10 seconds"><i class="fas fa-undo"></i></button>
+        <button id="host-play-pause" class="control-btn" title="Play or pause current song"><i class="fas fa-pause"></i></button>
+        <button id="host-seek-forward" class="control-btn" title="Forward 10 seconds"><i class="fas fa-redo"></i></button>
+        <button id="host-skip" class="control-btn" title="Skip to next song in queue"><i class="fas fa-step-forward"></i></button>
+        <button id="host-fullscreen" class="control-btn" title="Toggle fullscreen mode"><i class="fas fa-expand"></i></button>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+  <script src="/js/websocket.js"></script>
+  <script src="/js/karaoke.js"></script>
+</body>
+</html>

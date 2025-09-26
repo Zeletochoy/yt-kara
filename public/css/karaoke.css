@@ -1,0 +1,358 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background: #0f0f0f;
+  color: #e2e8f0;
+  overflow: hidden;
+  height: 100vh;
+}
+
+#app {
+  display: grid;
+  grid-template-columns: 1fr 260px;
+  grid-template-rows: 1fr auto;
+  height: 100vh;
+  gap: 8px;
+  padding: 8px;
+}
+
+/* Video Container */
+#video-container {
+  grid-column: 1;
+  grid-row: 1;
+  position: relative;
+  background: #1a1a1a;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+#video-player {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+#no-video {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Removed pulsing background effect for minimal design */
+
+#no-video h1 {
+  font-size: 4em;
+  margin-bottom: 20px;
+  color: #4a5568;
+  z-index: 1;
+  animation: breathe 4s ease-in-out infinite;
+}
+
+@keyframes breathe {
+  0%, 100% { opacity: 0.7; transform: scale(1); }
+  50% { opacity: 1; transform: scale(1.05); }
+}
+
+#no-video p {
+  font-size: 1.5em;
+  opacity: 0.8;
+  margin: 10px 0;
+  z-index: 1;
+  position: relative;
+  font-weight: 300;
+  letter-spacing: 1px;
+}
+
+#no-video .brand-title {
+  font-size: 2.5em;
+  font-weight: 500;
+  margin-bottom: 30px;
+  color: #4a5568;
+}
+
+/* Sidebar */
+#sidebar {
+  grid-column: 2;
+  grid-row: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  background: #1a1a1a;
+  border-radius: 8px;
+  padding: 10px;
+}
+
+#connection-info {
+  background: rgba(30, 30, 30, 0.5);
+  border-radius: 8px;
+  padding: 10px;
+  text-align: center;
+  border: 1px solid rgba(74, 85, 104, 0.2);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  position: relative;
+  overflow: hidden;
+}
+
+/* Removed shimmer effect for minimal design */
+}
+
+#connection-info h3 {
+  margin-bottom: 10px;
+  font-size: 1em;
+  font-weight: 500;
+  letter-spacing: 0.5px;
+  position: relative;
+  z-index: 1;
+}
+
+#qr-code {
+  background: white;
+  padding: 6px;
+  border-radius: 8px;
+  margin: 8px auto;
+  display: inline-block;
+  position: relative;
+  z-index: 1;
+}
+
+#qr-code canvas {
+  display: block;
+  border-radius: 8px;
+}
+
+#queue-section {
+  background: rgba(20, 20, 20, 0.8);
+  border-radius: 12px;
+  padding: 12px;
+  flex: 1;
+  overflow-y: auto;
+  border: 1px solid rgba(74, 85, 104, 0.15);
+}
+
+#queue-section h3 {
+  margin-bottom: 10px;
+  font-size: 1em;
+  font-weight: 500;
+  letter-spacing: 0.5px;
+}
+
+.queue-item {
+  background: rgba(30, 30, 30, 0.5);
+  border-radius: 8px;
+  padding: 10px;
+  margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border: 1px solid rgba(74, 85, 104, 0.1);
+  transition: transform 0.2s ease;
+  position: relative;
+}
+
+.queue-item:hover {
+  transform: translateX(2px);
+  background: rgba(40, 40, 40, 0.6);
+}
+
+.queue-item img {
+  width: 60px;
+  height: 45px;
+  object-fit: cover;
+  border-radius: 6px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+.queue-item-info {
+  flex: 1;
+}
+
+.queue-item-title {
+  font-size: 14px;
+  font-weight: 500;
+  margin-bottom: 4px;
+  letter-spacing: 0.3px;
+}
+
+.queue-item-meta {
+  font-size: 12px;
+  opacity: 0.7;
+  font-weight: 300;
+}
+
+.empty-state {
+  text-align: center;
+  padding: 40px 20px;
+  opacity: 0.5;
+  font-size: 1.1em;
+  font-weight: 300;
+  letter-spacing: 0.5px;
+}
+
+/* Special animation for empty queue to encourage adding songs */
+#queue-list .empty-state {
+  opacity: 0.7;
+  animation: pulse-invite 2s ease-in-out infinite;
+  position: relative;
+}
+
+@keyframes pulse-invite {
+  0%, 100% {
+    opacity: 0.5;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.9;
+    transform: scale(1.05);
+  }
+}
+
+/* Current Song Info */
+#current-info {
+  grid-column: 1 / -1;
+  grid-row: 2;
+  background: #1a1a1a;
+  border-radius: 12px;
+  padding: 10px 15px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  border: 1px solid rgba(74, 85, 104, 0.15);
+}
+
+#song-title {
+  flex: 1;
+  font-size: 18px;
+  font-weight: 400;
+  color: #e2e8f0;
+}
+
+#progress-bar {
+  flex: 2;
+  height: 8px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+  overflow: hidden;
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.3);
+}
+
+#progress-fill {
+  height: 100%;
+  background: #4a5568;
+  border-radius: 4px;
+  transition: width 0.5s ease;
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(74, 85, 104, 0.5);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(74, 85, 104, 0.7);
+}
+
+/* Hidden states */
+.hidden {
+  display: none !important;
+}
+
+/* Host Controls */
+#host-controls {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  margin-top: 10px;
+}
+
+#host-controls .control-btn {
+  padding: 8px 16px;
+  background: rgba(30, 30, 30, 0.8);
+  border: 1px solid rgba(74, 85, 104, 0.3);
+  color: #e2e8f0;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 15px;
+  transition: background 0.2s ease;
+}
+
+#host-controls .control-btn:hover {
+  background: rgba(40, 40, 40, 0.9);
+}
+
+#host-controls .control-btn:active {
+  background: rgba(50, 50, 50, 0.9);
+}
+
+/* Admin Controls Section */
+#admin-controls {
+  background: rgba(20, 20, 20, 0.8);
+  border-radius: 12px;
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  border: 1px solid rgba(74, 85, 104, 0.15);
+  margin-top: 6px;
+}
+
+#admin-controls .admin-btn {
+  padding: 8px 12px;
+  background: rgba(30, 30, 30, 0.6);
+  border: 1px solid rgba(74, 85, 104, 0.3);
+  color: #94a3b8;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 12px;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  position: relative;
+}
+
+#admin-controls .admin-btn i {
+  font-size: 14px;
+  opacity: 0.8;
+}
+
+#admin-controls .admin-btn span {
+  font-weight: 400;
+  letter-spacing: 0.3px;
+}
+
+#admin-controls .admin-btn:hover {
+  background: rgba(40, 40, 40, 0.7);
+  color: #e2e8f0;
+  transform: translateX(2px);
+}
+
+#admin-controls #host-reset-queue:hover {
+  border-color: rgba(239, 68, 68, 0.5);
+  color: #ef4444;
+}
+
+#admin-controls #host-reset-history:hover {
+  border-color: rgba(251, 146, 60, 0.5);
+  color: #fb923c;
+}

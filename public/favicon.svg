@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <!-- Background with gradient -->
+  <defs>
+    <linearGradient id="bgGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#ef4444;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#dc2626;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+
+  <!-- Background circle -->
+  <circle cx="50" cy="50" r="48" fill="url(#bgGradient)"/>
+
+  <!-- White microphone icon -->
+  <!-- Microphone body -->
+  <rect x="38" y="18" width="24" height="42" rx="12" fill="#ffffff"/>
+
+  <!-- Microphone grill pattern -->
+  <circle cx="50" cy="30" r="8" fill="#ef4444"/>
+  <circle cx="50" cy="30" r="5" fill="#ffffff"/>
+  <circle cx="50" cy="30" r="3" fill="#ef4444"/>
+
+  <!-- Microphone stand -->
+  <path d="M 32 55 Q 32 72 50 72 Q 68 72 68 55"
+        fill="none" stroke="#ffffff" stroke-width="4" stroke-linecap="round"/>
+
+  <!-- Stand base -->
+  <line x1="50" y1="72" x2="50" y2="82" stroke="#ffffff" stroke-width="4" stroke-linecap="round"/>
+  <line x1="38" y1="82" x2="62" y2="82" stroke="#ffffff" stroke-width="4" stroke-linecap="round"/>
+</svg>
