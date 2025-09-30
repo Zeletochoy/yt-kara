@@ -5,6 +5,8 @@ const queueList = document.getElementById('queue-list');
 const songTitle = document.getElementById('song-title');
 const progressFill = document.getElementById('progress-fill');
 const currentInfo = document.getElementById('current-info');
+const currentTimeEl = document.getElementById('current-time');
+const totalTimeEl = document.getElementById('total-time');
 
 let currentVideoUrl = null;
 let playbackUpdateInterval = null;
@@ -74,7 +76,7 @@ async function setupQRCode() {
     qrContainer.innerHTML = '';
 
     // Create QR code using QRCode.js
-    const qr = new QRCode(qrContainer, {
+    new QRCode(qrContainer, {
       text: networkUrl,
       width: 150,
       height: 150,
@@ -130,7 +132,31 @@ function setupVideoPlayer() {
   });
 
   videoPlayer.addEventListener('ended', () => {
+    console.log('Video ended, skipping to next song');
+    // Clear current video URL to ensure next song loads properly
+    currentVideoUrl = null;
     wsConnection.skipSong();
+  });
+
+  // Update progress bar and time display continuously during playback
+  videoPlayer.addEventListener('timeupdate', () => {
+    if (videoPlayer.duration) {
+      updateProgress(videoPlayer.currentTime, videoPlayer.duration);
+      updateTimeDisplay(videoPlayer.currentTime, videoPlayer.duration);
+
+      // Workaround: Check if we're near the end and video is about to end
+      if (videoPlayer.duration - videoPlayer.currentTime < 0.5 && !videoPlayer.paused && currentVideoUrl) {
+        console.log('Near end of video, preparing for next song');
+        // Clear currentVideoUrl early to ensure next song loads
+        if (videoPlayer.duration - videoPlayer.currentTime < 0.1) {
+          if (currentVideoUrl) {
+            console.log('Video about to end, triggering skip');
+            currentVideoUrl = null;
+            wsConnection.skipSong();
+          }
+        }
+      }
+    }
   });
 
   // Send playback updates periodically
@@ -188,13 +214,21 @@ function setupHostControls() {
 
   seekBackBtn?.addEventListener('click', () => {
     const newTime = Math.max(0, videoPlayer.currentTime - 10);
-    videoPlayer.currentTime = newTime;
+    if (msePlayer && useHDMode) {
+      msePlayer.seek(newTime);
+    } else {
+      videoPlayer.currentTime = newTime;
+    }
     wsConnection.seek(newTime);
   });
 
   seekForwardBtn?.addEventListener('click', () => {
     const newTime = Math.min(videoPlayer.duration || 0, videoPlayer.currentTime + 10);
-    videoPlayer.currentTime = newTime;
+    if (msePlayer && useHDMode) {
+      msePlayer.seek(newTime);
+    } else {
+      videoPlayer.currentTime = newTime;
+    }
     wsConnection.seek(newTime);
   });
 
@@ -229,6 +263,7 @@ function updatePlayPauseButton(isPaused) {
 }
 
 async function updateUI(state) {
+  console.log('UpdateUI called with state:', state.currentSong?.title, 'isPlaying:', state.isPlaying);
   // Update queue
   updateQueue(state.queue);
 
@@ -266,22 +301,42 @@ async function updateUI(state) {
 }
 
 async function loadVideo(song, isPlaying = true) {
-  if (currentVideoUrl?.videoId === song.videoId) return;
+  console.log('LoadVideo called for:', song.title, 'current:', currentVideoUrl?.videoId, 'new:', song.videoId);
 
-  // Stop and clean up current video first
+  // Check if it's the same video BEFORE cleaning up
+  if (currentVideoUrl?.videoId === song.videoId) {
+    console.log('Same video, skipping load');
+    // If MSE player exists and video is playing properly, keep it
+    // If video element has an error, clean up and reload
+    if (videoPlayer.error || !videoPlayer.src) {
+      console.log('Video has error or no src, cleaning up and reloading');
+      // Continue to reload the video
+    } else {
+      return; // Video is fine, skip reload
+    }
+  }
+
+  // Clean up existing MSE player FIRST before touching video element
+  if (msePlayer) {
+    msePlayer.destroy();
+    msePlayer = null;
+  }
+
+  // Stop and clean up current video
   videoPlayer.pause();
   videoPlayer.removeAttribute('src');
   videoPlayer.load(); // Reset the video element
 
   try {
-    // Clean up existing MSE player if any
-    if (msePlayer) {
-      msePlayer.destroy();
-      msePlayer = null;
-    }
 
     const response = await fetch(`/api/video/${song.videoId}?hd=${useHDMode}`);
     const videoInfo = await response.json();
+
+    // Check if the API call failed
+    if (!response.ok || videoInfo.error) {
+      console.error('Failed to get video URL:', videoInfo.error || videoInfo.message);
+      throw new Error(videoInfo.message || 'Failed to get video URL');
+    }
 
     currentVideoUrl = { ...videoInfo, videoId: song.videoId };
 
@@ -318,7 +373,7 @@ async function loadVideo(song, isPlaying = true) {
 
     // Use MSE player for HD mode if available
     if (useHDMode && videoInfo.hdMode && videoInfo.videoUrl && videoInfo.audioUrl) {
-      console.log('Using MSE player for HD playback');
+      console.log('[KARAOKE] Using MSE player for HD playback');
 
       videoPlayer.style.display = 'block';
       noVideoDiv.style.display = 'none';
@@ -326,11 +381,24 @@ async function loadVideo(song, isPlaying = true) {
 
       msePlayer = new MSEPlayer(videoPlayer);
 
-      // Use proxy endpoints for streaming
+      // Use proxy endpoints for streaming (avoids CORS issues)
       const videoStreamUrl = `/api/stream/video/${song.videoId}`;
       const audioStreamUrl = `/api/stream/audio/${song.videoId}`;
 
-      await msePlayer.load(videoStreamUrl, audioStreamUrl);
+      try {
+        await msePlayer.load(
+          videoStreamUrl,
+          audioStreamUrl,
+          videoInfo.videoCodec,
+          videoInfo.audioCodec,
+          videoInfo.videoExt,
+          videoInfo.audioExt
+        );
+        console.log('[KARAOKE] MSE player loaded successfully');
+      } catch (error) {
+        console.error('[KARAOKE] MSE player load failed:', error);
+        throw error;
+      }
 
       // For MSE player, trigger play directly
       if (isPlaying) {
@@ -388,6 +456,10 @@ async function loadVideo(song, isPlaying = true) {
 
 function updateCurrentSong(song) {
   songTitle.textContent = `♪ ${song.title}`;
+  // Update total time display
+  if (totalTimeEl && song.duration) {
+    totalTimeEl.textContent = formatTime(song.duration);
+  }
 }
 
 function updateProgress(currentTime, duration) {
@@ -410,4 +482,16 @@ function updateQueue(queue) {
       </div>
     </div>
   `).join('');
+}
+
+function formatTime(seconds) {
+  if (!seconds || isNaN(seconds)) return '0:00';
+  const mins = Math.floor(seconds / 60);
+  const secs = Math.floor(seconds % 60);
+  return `${mins}:${secs.toString().padStart(2, '0')}`;
+}
+
+function updateTimeDisplay(currentTime, duration) {
+  if (currentTimeEl) currentTimeEl.textContent = formatTime(currentTime);
+  if (totalTimeEl) totalTimeEl.textContent = formatTime(duration);
 }

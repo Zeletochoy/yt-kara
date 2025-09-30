@@ -1,12 +1,16 @@
 const { exec } = require('child_process');
 const util = require('util');
+const fs = require('fs');
+const path = require('path');
 const execPromise = util.promisify(exec);
 
 class YouTubeService {
   constructor() {
     this.urlCache = new Map();
     this.searchCache = new Map();
+    this.cookiesFile = path.join(__dirname, '..', 'data', 'cookies.txt');
     this.checkYtDlp();
+    this.setupCookies();
   }
 
   async checkYtDlp() {
@@ -21,12 +25,51 @@ class YouTubeService {
     }
   }
 
-  async getVideoUrl(videoId, hdMode = false) {
-    // Check cache
+  async setupCookies() {
+    if (fs.existsSync(this.cookiesFile)) {
+      console.log('✓ Using cached cookies from data/cookies.txt');
+      return;
+    }
+
+    console.log('Setting up YouTube cookies (one-time setup)...');
+    console.log('You may be prompted to unlock your keychain ONCE.');
+
+    // Ensure data directory exists
+    const dataDir = path.dirname(this.cookiesFile);
+    if (!fs.existsSync(dataDir)) {
+      fs.mkdirSync(dataDir, { recursive: true });
+    }
+
+    try {
+      // Export cookies using yt-dlp (will prompt for keychain once)
+      await execPromise(
+        `yt-dlp --cookies-from-browser chrome --cookies "${this.cookiesFile}" --skip-download "https://www.youtube.com/watch?v=dQw4w9WgXcQ"`
+      );
+
+      if (fs.existsSync(this.cookiesFile)) {
+        console.log('✓ Cookies cached successfully');
+      }
+    } catch (error) {
+      console.log('⚠ Could not cache cookies. Videos may be restricted.');
+    }
+  }
+
+  getCookiesArg() {
+    if (fs.existsSync(this.cookiesFile)) {
+      return ` --cookies "${this.cookiesFile}"`;
+    }
+    return '';
+  }
+
+
+  async getVideoUrl(videoId, hdMode = false, forceRefresh = false) {
+    // Check cache unless forcing refresh due to expired URL
     const cacheKey = hdMode ? `${videoId}_hd` : videoId;
-    const cached = this.urlCache.get(cacheKey);
-    if (cached && cached.expiresAt > Date.now()) {
-      return cached;
+    if (!forceRefresh) {
+      const cached = this.urlCache.get(cacheKey);
+      if (cached && cached.expiresAt > Date.now()) {
+        return cached;
+      }
     }
 
     try {
@@ -36,35 +79,42 @@ class YouTubeService {
         // Get separate video and audio URLs for HD playback
         console.log(`Getting HD streams for ${videoId}`);
 
-        // Get best video (up to 1080p) and best audio separately
-        const { stdout: videoUrlOutput } = await execPromise(
-          `yt-dlp -f "bestvideo[height<=720][ext=mp4]/bestvideo[height<=720]" --get-url --no-warnings "${url}"`,
-          {
-            maxBuffer: 10 * 1024 * 1024,
-            timeout: 30000
-          }
-        );
+        const cookiesArg = this.getCookiesArg();
 
-        const { stdout: audioUrlOutput } = await execPromise(
-          `yt-dlp -f "bestaudio[ext=m4a]/bestaudio" --get-url --no-warnings "${url}"`,
-          {
-            maxBuffer: 10 * 1024 * 1024,
-            timeout: 30000
-          }
-        );
+        // Run all three yt-dlp commands in parallel for better performance
+        const [videoResult, audioResult, infoResult] = await Promise.all([
+          // Get video URL with codec info
+          execPromise(
+            `yt-dlp${cookiesArg} -f "bestvideo[height<=720][vcodec^=avc]/bestvideo[height<=720]" --print "%(url)s|%(vcodec)s|%(ext)s" --no-warnings "${url}"`,
+            {
+              maxBuffer: 10 * 1024 * 1024,
+              timeout: 30000
+            }
+          ),
+          // Get audio URL with codec info
+          execPromise(
+            `yt-dlp${cookiesArg} -f "bestaudio[ext=m4a]/bestaudio" --print "%(url)s|%(acodec)s|%(ext)s" --no-warnings "${url}"`,
+            {
+              maxBuffer: 10 * 1024 * 1024,
+              timeout: 30000
+            }
+          ),
+          // Get video metadata
+          execPromise(
+            `yt-dlp${cookiesArg} -j --no-warnings "${url}"`,
+            {
+              maxBuffer: 10 * 1024 * 1024,
+              timeout: 30000
+            }
+          )
+        ]);
 
-        // Get video metadata
-        const { stdout: infoOutput } = await execPromise(
-          `yt-dlp -j --no-warnings "${url}"`,
-          {
-            maxBuffer: 10 * 1024 * 1024,
-            timeout: 30000
-          }
-        );
+        // Parse the outputs
+        const [videoUrl, videoCodec, videoExt] = videoResult.stdout.trim().split('|');
+        const [audioUrl, audioCodec, audioExt] = audioResult.stdout.trim().split('|');
+        const infoOutput = infoResult.stdout;
 
         const info = JSON.parse(infoOutput);
-        const videoUrl = videoUrlOutput.trim();
-        const audioUrl = audioUrlOutput.trim();
 
         if (!videoUrl || !audioUrl) {
           throw new Error('No HD streams found');
@@ -73,6 +123,10 @@ class YouTubeService {
         const videoInfo = {
           videoUrl: videoUrl,  // Separate video URL
           audioUrl: audioUrl,  // Separate audio URL
+          videoCodec: videoCodec, // e.g. "avc1.4d401f" or "av01.0.08M.08"
+          audioCodec: audioCodec, // e.g. "mp4a.40.2"
+          videoExt: videoExt,     // "mp4" or "webm"
+          audioExt: audioExt,     // "m4a" or "webm"
           hdMode: true,
           title: info.title || '',
           thumbnail: info.thumbnail || '',
@@ -86,10 +140,9 @@ class YouTubeService {
         return videoInfo;
       } else {
         // Original mode - get combined video+audio for standard playback
-        // First get the direct URL with optimal format selection
-        // Try format 22 (720p mp4 with audio) first, then fallback to best available
+        const cookiesArg = this.getCookiesArg();
         const { stdout: urlOutput } = await execPromise(
-          `yt-dlp -f "22/best[height>=720]/best" --get-url --no-warnings "${url}"`,
+          `yt-dlp${cookiesArg} -f "22/best[height>=720]/best" --get-url --no-warnings "${url}"`,
           {
             maxBuffer: 10 * 1024 * 1024,
             timeout: 30000
@@ -98,7 +151,7 @@ class YouTubeService {
 
         // Then get the video metadata
         const { stdout: infoOutput } = await execPromise(
-          `yt-dlp -j --no-warnings "${url}"`,
+          `yt-dlp${cookiesArg} -j --no-warnings "${url}"`,
           {
             maxBuffer: 10 * 1024 * 1024,
             timeout: 30000
@@ -138,6 +191,8 @@ class YouTubeService {
 
       // Clear from cache if it exists
       this.urlCache.delete(cacheKey);
+      this.urlCache.delete(`${videoId}_hd`);
+      this.urlCache.delete(videoId);
 
       // Return error response
       return {
@@ -157,8 +212,9 @@ class YouTubeService {
 
     try {
       // Use yt-dlp to search (limited to 10 results for speed)
+      const cookiesArg = this.getCookiesArg();
       const { stdout } = await execPromise(
-        `yt-dlp "ytsearch10:${query}" --flat-playlist -j --no-warnings`,
+        `yt-dlp${cookiesArg} "ytsearch10:${query}" --flat-playlist -j --no-warnings`,
         { maxBuffer: 10 * 1024 * 1024 } // 10MB buffer
       );
 
@@ -203,6 +259,25 @@ class YouTubeService {
       // Return empty results instead of throwing
       return [];
     }
+  }
+
+  // Prefetch video URL without blocking
+  async prefetchVideoUrl(videoId) {
+    // Check if already cached
+    const hdCacheKey = `${videoId}_hd`;
+    const normalCacheKey = videoId;
+
+    if (this.urlCache.has(hdCacheKey) || this.urlCache.has(normalCacheKey)) {
+      console.log(`URL already cached for ${videoId}`);
+      return;
+    }
+
+    console.log(`Prefetching URL for ${videoId}...`);
+
+    // Run in background without awaiting
+    this.getVideoUrl(videoId, true).catch(error => {
+      console.error(`Failed to prefetch ${videoId}:`, error.message);
+    });
   }
 }
 

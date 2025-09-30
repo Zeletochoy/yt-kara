@@ -11,6 +11,10 @@ class MSEPlayer {
     this.isAudioSourceOpen = false;
     this.videoUrl = null;
     this.audioUrl = null;
+    this.videoCodec = null;
+    this.audioCodec = null;
+    this.videoExt = null;
+    this.audioExt = null;
     this.fetchControllers = new Set();
     this.isDestroyed = false;
     this.bufferCheckInterval = null;
@@ -22,15 +26,15 @@ class MSEPlayer {
     this.bufferRemoveThreshold = 120; // seconds
   }
 
-  async load(videoUrl, audioUrl) {
-    console.log('MSE Player loading:', { videoUrl, audioUrl });
-
-    // Clean up any existing playback
-    this.destroy();
-    this.isDestroyed = false;
+  async load(videoUrl, audioUrl, videoCodec, audioCodec, videoExt, audioExt) {
+    console.log('MSE Player loading:', { videoUrl, audioUrl, videoCodec, audioCodec });
 
     this.videoUrl = videoUrl;
     this.audioUrl = audioUrl;
+    this.videoCodec = videoCodec;
+    this.audioCodec = audioCodec;
+    this.videoExt = videoExt;
+    this.audioExt = audioExt;
 
     // Create MediaSource
     this.mediaSource = new MediaSource();
@@ -55,20 +59,28 @@ class MSEPlayer {
   }
 
   async onSourceOpen() {
-    console.log('MediaSource opened');
+    console.log('[MSE] MediaSource opened, readyState:', this.mediaSource.readyState);
+
+    // Add listener for MediaSource closing unexpectedly
+    this.mediaSource.addEventListener('sourceclose', () => {
+      console.log('[MSE] MediaSource sourceclose event fired');
+      console.log('[MSE] Video element readyState:', this.video.readyState);
+      console.log('[MSE] Video element src:', this.video.src?.substring(0, 50));
+      if (!this.isDestroyed) {
+        console.log('[MSE] Setting isDestroyed=true due to sourceclose');
+        // Stop trying to fetch/append if MediaSource closes
+        this.isDestroyed = true;
+      }
+    });
+
+    this.mediaSource.addEventListener('sourceended', () => {
+      console.log('[MSE] MediaSource sourceended event');
+    });
 
     try {
-      // Get media info first to determine codecs
-      const [videoInfo, audioInfo] = await Promise.all([
-        this.getStreamInfo(this.videoUrl),
-        this.getStreamInfo(this.audioUrl)
-      ]);
-
-      console.log('Stream info:', { videoInfo, audioInfo });
-
-      // Create source buffers with detected codecs
-      const videoCodec = this.detectVideoCodec(videoInfo);
-      const audioCodec = this.detectAudioCodec(audioInfo);
+      // Get the codec info from the parent - it was provided by yt-dlp
+      const videoCodec = this.formatCodecString(this.videoCodec, this.videoExt, 'video');
+      const audioCodec = this.formatCodecString(this.audioCodec, this.audioExt, 'audio');
 
       console.log('Using codecs:', { videoCodec, audioCodec });
 
@@ -100,51 +112,42 @@ class MSEPlayer {
     }
   }
 
-  detectVideoCodec(info) {
-    // Try to detect from content-type or default to common codec
-    const contentType = info.contentType?.toLowerCase() || '';
-
-    if (contentType.includes('webm')) {
-      return 'video/webm; codecs="vp9"';
-    } else if (contentType.includes('mp4')) {
-      return 'video/mp4; codecs="avc1.4d401f"'; // H.264 Main Profile
+  formatCodecString(codec, ext, type) {
+    // Format the codec string for MSE based on what yt-dlp gave us
+    if (!codec) {
+      // Fallback if no codec info
+      return type === 'video' ? 'video/mp4; codecs="avc1.4d401f"' : 'audio/mp4; codecs="mp4a.40.2"';
     }
 
-    // Default to MP4 as it's most common from YouTube
-    return 'video/mp4; codecs="avc1.4d401f"';
-  }
+    // Determine container format
+    const container = ext === 'webm' ? 'webm' : 'mp4';
+    const mediaType = `${type}/${container}`;
 
-  detectAudioCodec(info) {
-    // Try to detect from content-type or default to common codec
-    const contentType = info.contentType?.toLowerCase() || '';
-
-    if (contentType.includes('webm')) {
-      return 'audio/webm; codecs="opus"';
-    } else if (contentType.includes('mp4')) {
-      return 'audio/mp4; codecs="mp4a.40.2"'; // AAC-LC
-    }
-
-    // Default to AAC
-    return 'audio/mp4; codecs="mp4a.40.2"';
-  }
-
-  async getStreamInfo(url) {
-    const response = await fetch(url, {
-      method: 'HEAD'
-    });
-
-    return {
-      contentType: response.headers.get('content-type'),
-      contentLength: response.headers.get('content-length'),
-      acceptRanges: response.headers.get('accept-ranges') === 'bytes'
-    };
+    // Return properly formatted codec string
+    return `${mediaType}; codecs="${codec}"`;
   }
 
   setupSourceBuffer(buffer, type) {
     buffer.mode = 'segments';
+    console.log(`[MSE ${type}] Buffer setup, mode: segments`);
 
     buffer.addEventListener('updateend', () => {
-      if (this.isDestroyed) return;
+      if (this.isDestroyed) {
+        console.log(`[MSE ${type}] updateend ignored - player destroyed`);
+        return;
+      }
+
+      // Check if MediaSource is still valid
+      if (!this.mediaSource || this.mediaSource.readyState !== 'open') {
+        console.log(`[MSE ${type}] updateend ignored - MediaSource not open: ${this.mediaSource?.readyState}`);
+        return;
+      }
+
+      // Check if buffer is still in MediaSource
+      if (!this.mediaSource.sourceBuffers || !Array.from(this.mediaSource.sourceBuffers).includes(buffer)) {
+        console.log(`[MSE ${type}] updateend ignored - buffer removed from MediaSource`);
+        return;
+      }
 
       if (type === 'video' && this.videoQueue.length > 0 && !buffer.updating) {
         const data = this.videoQueue.shift();
@@ -156,7 +159,15 @@ class MSEPlayer {
     });
 
     buffer.addEventListener('error', (e) => {
-      console.error(`${type} buffer error:`, e);
+      console.error(`[MSE ${type}] Buffer error event:`, e);
+      console.error(`[MSE ${type}] MediaSource state: ${this.mediaSource?.readyState}`);
+      console.error(`[MSE ${type}] Buffer updating: ${buffer.updating}`);
+      console.error(`[MSE ${type}] isDestroyed: ${this.isDestroyed}`);
+      // Mark as destroyed to stop further operations if buffer errors
+      if (!this.isDestroyed) {
+        console.error(`[MSE ${type}] Setting isDestroyed=true due to buffer error`);
+        this.isDestroyed = true;
+      }
     });
   }
 
@@ -245,14 +256,27 @@ class MSEPlayer {
   }
 
   appendBuffer(buffer, data) {
-    if (this.isDestroyed || !buffer) return;
+    if (this.isDestroyed || !buffer) {
+      console.log(`[MSE] appendBuffer skipped - destroyed:${this.isDestroyed} buffer:${!!buffer}`);
+      return;
+    }
 
     try {
+      // Double-check buffer is still valid before appending
+      if (this.mediaSource && this.mediaSource.sourceBuffers) {
+        if (!Array.from(this.mediaSource.sourceBuffers).includes(buffer)) {
+          console.error('[MSE] Buffer not in sourceBuffers, skipping append');
+          return;
+        }
+      }
+
       buffer.appendBuffer(data);
     } catch (error) {
-      console.error('Error appending to buffer:', error);
+      console.error('[MSE] Error appending to buffer:', error.name, error.message);
+      console.error('[MSE] MediaSource state during append error:', this.mediaSource?.readyState);
       // If quota exceeded, try to remove old data
       if (error.name === 'QuotaExceededError') {
+        console.log('[MSE] Quota exceeded, cleaning up buffer');
         this.cleanupBuffer(buffer);
       }
     }
@@ -260,18 +284,32 @@ class MSEPlayer {
 
   async waitForBufferSpace(type) {
     const buffer = type === 'video' ? this.videoBuffer : this.audioBuffer;
-    if (!buffer) return;
+    if (!buffer || this.isDestroyed) return;
 
     // Wait if we have too much buffered
-    while (!this.isDestroyed && buffer.buffered.length > 0) {
-      const bufferedEnd = buffer.buffered.end(buffer.buffered.length - 1);
-      const bufferedStart = buffer.buffered.start(0);
-      const bufferedAmount = bufferedEnd - this.video.currentTime;
+    while (!this.isDestroyed && this.mediaSource && this.mediaSource.readyState === 'open') {
+      try {
+        // Check if the buffer is still in the MediaSource
+        if (!this.mediaSource.sourceBuffers || !Array.from(this.mediaSource.sourceBuffers).includes(buffer)) {
+          break;
+        }
 
-      if (bufferedAmount > this.maxBufferLength) {
-        // Too much buffered, wait a bit
-        await new Promise(resolve => setTimeout(resolve, 1000));
-      } else {
+        if (buffer.buffered.length > 0) {
+          const bufferedEnd = buffer.buffered.end(buffer.buffered.length - 1);
+          const bufferedStart = buffer.buffered.start(0);
+          const bufferedAmount = bufferedEnd - this.video.currentTime;
+
+          if (bufferedAmount > this.maxBufferLength) {
+            // Too much buffered, wait a bit
+            await new Promise(resolve => setTimeout(resolve, 1000));
+          } else {
+            break;
+          }
+        } else {
+          break;
+        }
+      } catch (error) {
+        // Buffer was likely removed, exit gracefully
         break;
       }
     }
@@ -293,14 +331,23 @@ class MSEPlayer {
   }
 
   manageBuffers() {
+    // Exit early if player is destroyed or MediaSource is not open
+    if (this.isDestroyed || !this.mediaSource || this.mediaSource.readyState !== 'open') {
+      return;
+    }
+
     [this.videoBuffer, this.audioBuffer].forEach(buffer => {
-      if (!buffer || buffer.updating) return;
+      if (!buffer || buffer.updating || this.isDestroyed) return;
 
       try {
+        // Check if the buffer is still in the MediaSource
+        if (!this.mediaSource.sourceBuffers || !Array.from(this.mediaSource.sourceBuffers).includes(buffer)) {
+          return;
+        }
+
         if (buffer.buffered.length > 0) {
           const currentTime = this.video.currentTime;
           const bufferedStart = buffer.buffered.start(0);
-          const bufferedEnd = buffer.buffered.end(buffer.buffered.length - 1);
 
           // Remove old buffered data that's far behind current time
           if (currentTime - bufferedStart > this.bufferRemoveThreshold) {
@@ -312,15 +359,26 @@ class MSEPlayer {
           }
         }
       } catch (error) {
-        console.error('Error managing buffer:', error);
+        // Don't log errors if we're destroyed or MediaSource is closed - it's expected
+        if (!this.isDestroyed && this.mediaSource && this.mediaSource.readyState === 'open') {
+          console.error('Error managing buffer:', error);
+        }
       }
     });
   }
 
   cleanupBuffer(buffer) {
-    if (!buffer || buffer.updating) return;
+    if (!buffer || buffer.updating || this.isDestroyed) return;
+
+    // Check MediaSource is still valid
+    if (!this.mediaSource || this.mediaSource.readyState !== 'open') return;
 
     try {
+      // Check if the buffer is still in the MediaSource
+      if (!this.mediaSource.sourceBuffers || !Array.from(this.mediaSource.sourceBuffers).includes(buffer)) {
+        return;
+      }
+
       const currentTime = this.video.currentTime;
       if (buffer.buffered.length > 0) {
         const bufferedStart = buffer.buffered.start(0);
@@ -332,7 +390,10 @@ class MSEPlayer {
         }
       }
     } catch (error) {
-      console.error('Error cleaning up buffer:', error);
+      // Don't log errors if we're destroyed or MediaSource is closed - it's expected
+      if (!this.isDestroyed && this.mediaSource && this.mediaSource.readyState === 'open') {
+        console.error('Error cleaning up buffer:', error);
+      }
     }
   }
 
@@ -355,7 +416,9 @@ class MSEPlayer {
   }
 
   destroy() {
-    console.log('Destroying MSE player');
+    console.log('[MSE] destroy() called');
+    console.log('[MSE] Current MediaSource state:', this.mediaSource?.readyState);
+    console.log('[MSE] Video element state:', this.video?.readyState);
     this.isDestroyed = true;
 
     // Abort all fetches
@@ -374,20 +437,26 @@ class MSEPlayer {
 
     // Clean up source buffers
     if (this.mediaSource && this.mediaSource.readyState === 'open') {
+      console.log('[MSE] Removing source buffers from MediaSource');
       try {
         if (this.videoBuffer) {
+          console.log('[MSE] Removing video buffer');
           this.mediaSource.removeSourceBuffer(this.videoBuffer);
         }
         if (this.audioBuffer) {
+          console.log('[MSE] Removing audio buffer');
           this.mediaSource.removeSourceBuffer(this.audioBuffer);
         }
       } catch (error) {
-        console.error('Error removing source buffers:', error);
+        console.error('[MSE] Error removing source buffers:', error.name, error.message);
       }
+    } else {
+      console.log('[MSE] Skipping buffer removal - MediaSource state:', this.mediaSource?.readyState);
     }
 
     // Clear video src
     if (this.video.src && this.video.src.startsWith('blob:')) {
+      console.log('[MSE] Revoking blob URL');
       URL.revokeObjectURL(this.video.src);
       this.video.src = '';
     }
