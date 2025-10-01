@@ -25,7 +25,9 @@
     <div id="sidebar">
       <div id="connection-info">
         <h3>Scan to Join</h3>
-        <div id="qr-code"></div>
+        <a id="qr-link" href="/client" target="_blank" rel="noopener">
+          <div id="qr-code"></div>
+        </a>
       </div>
 
       <div id="queue-section">
@@ -48,8 +50,13 @@
     <!-- Current Song Info -->
     <div id="current-info">
       <div id="song-title"></div>
-      <div id="progress-bar">
-        <div id="progress-fill"></div>
+      <div id="progress-container">
+        <div id="progress-bar">
+          <div id="progress-fill"></div>
+        </div>
+        <div id="time-display">
+          <span id="current-time">0:00</span> / <span id="total-time">0:00</span>
+        </div>
       </div>
       <div id="host-controls">
         <button id="host-previous" class="control-btn" title="Go back to previous song"><i class="fas fa-step-backward"></i></button>

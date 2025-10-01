@@ -90,6 +90,13 @@ async function setupQRCode() {
       const img = qrContainer.querySelector('img');
       if (img) img.removeAttribute('title');
     }, 100);
+
+    // Update the QR link href
+    const qrLink = document.getElementById('qr-link');
+    if (qrLink) {
+      qrLink.href = networkUrl;
+    }
+
     console.log('QR code generated successfully with network URL:', networkUrl);
   } catch (error) {
     console.error('Failed to setup QR code:', error);
@@ -107,6 +114,12 @@ async function setupQRCode() {
         colorLight: '#ffffff',
         correctLevel: QRCode.CorrectLevel.H
       });
+
+      // Update the QR link href in fallback case
+      const qrLink = document.getElementById('qr-link');
+      if (qrLink) {
+        qrLink.href = localUrl;
+      }
     }
   }
 }

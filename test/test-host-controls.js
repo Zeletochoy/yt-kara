@@ -47,8 +47,10 @@ async function testHostControls() {
         hasSeekBack: !!seekBack,
         hasSeekForward: !!seekForward,
         hasSkip: !!skip,
-        seekBackText: seekBack?.textContent,
-        seekForwardText: seekForward?.textContent
+        seekBackIcon: seekBack?.querySelector('.fa-undo') !== null,
+        seekForwardIcon: seekForward?.querySelector('.fa-redo') !== null,
+        seekBackTitle: seekBack?.title,
+        seekForwardTitle: seekForward?.title
       };
     });
 
@@ -57,9 +59,11 @@ async function testHostControls() {
     assert(controlsVisible.hasSeekBack, 'Seek back button should exist');
     assert(controlsVisible.hasSeekForward, 'Seek forward button should exist');
     assert(controlsVisible.hasSkip, 'Skip button should exist');
-    assert(controlsVisible.seekBackText === '-10s', 'Seek back should be -10s');
-    assert(controlsVisible.seekForwardText === '+10s', 'Seek forward should be +10s');
-    console.log('    ✓ All host controls visible with correct labels');
+    assert(controlsVisible.seekBackIcon, 'Seek back should have undo icon');
+    assert(controlsVisible.seekForwardIcon, 'Seek forward should have redo icon');
+    assert(controlsVisible.seekBackTitle.includes('10'), 'Seek back title should mention 10 seconds');
+    assert(controlsVisible.seekForwardTitle.includes('10'), 'Seek forward title should mention 10 seconds');
+    console.log('    ✓ All host controls visible with correct icons');
 
     // Test seek controls
     await new Promise(r => setTimeout(r, 2000));
