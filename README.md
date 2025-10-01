@@ -1,81 +1,120 @@
 # YT-Kara 🎤
 
-A local karaoke webapp for parties where a TV/projector plays YouTube videos while friends control the queue from their phones.
+A karaoke web app thrown together for parties - plays YouTube videos on a TV while friends control the queue from their phones. Vibe-coded quickly with Claude Code to solve a real problem: every karaoke app sucks or costs money.
+
+**Note**: This was built fast to work, not to be pretty. The code isn't the cleanest and it probably won't be actively maintained. But hey, it works! 🤷
 
 ## ✨ Features
 
-- 🎵 Play karaoke videos from YouTube on a big screen
-- 📱 Control from any phone via QR code
-- 🔍 Search and queue songs
-- ⏯️ Full playback controls
-- 📜 Song history tracking
-- 🔄 Real-time sync between all devices
-- 🚫 No iframe restrictions - works with ALL videos
+- 🎵 **YouTube Playback** - Plays any YouTube video (actually works, unlike iframe embeds)
+- 📱 **Phone Control** - Everyone connects via QR code
+- 🔍 **Search & Queue** - Search YouTube, add to queue
+- 🎬 **HD Streaming** - Uses MSE for better quality when possible
+- 💾 **Persistent Queue** - Survives server restarts
+- 🔄 **Real-time Sync** - All devices stay in sync
 
 ## 📦 Installation
 
-### Quick Setup (Recommended)
+### Requirements
+- Node.js 18+
+- Python 3+ (for yt-dlp)
+- A computer connected to a TV
+
+### Quick Setup
 
 ```bash
-# Clone the repository
-git clone <your-repo-url>
+# Clone it
+git clone https://github.com/Zeletochoy/yt-kara.git
 cd yt-kara
 
-# Run automatic setup (installs yt-dlp and dependencies)
+# Install everything (includes yt-dlp)
 npm run setup
 
-# Start the server
+# Start it
 npm start
 ```
 
 ### Manual Setup
 
-1. **Install yt-dlp** (required for reliable video extraction):
-   ```bash
-   # macOS
-   brew install yt-dlp
+If the setup script fails:
 
-   # Ubuntu/Debian
-   sudo apt install yt-dlp
+```bash
+# Install yt-dlp (the magic that makes this work)
+pip3 install yt-dlp
 
-   # Using pip
-   pip3 install yt-dlp
-   ```
+# Install node stuff
+npm install
 
-2. **Install Node.js dependencies:**
-   ```bash
-   npm install
-   ```
+# Run it
+npm start
+```
 
-3. **Start the server:**
-   ```bash
-   npm start
-   ```
+## 🎮 How to Use
 
-## 🎮 Usage
+### Setup for Party
 
-1. Start the server: `npm start`
-2. Open the displayed URL on your TV/projector (usually http://localhost:8080)
-3. Scan the QR code with your phone
-4. Search for songs and add them to the queue
+1. Run `npm start` on computer connected to TV
+2. Open `http://localhost:8080` on the TV browser
+3. Everyone scans the QR code with their phones
+4. Search and add songs
 5. Party! 🎉
 
-## 🛠️ Why yt-dlp?
+### Controls
 
-This app uses **yt-dlp** instead of JavaScript libraries because:
-- ✅ Works with 99% of YouTube videos
-- ✅ Actively maintained and updated daily
-- ✅ Handles YouTube's frequent API changes
-- ✅ Much more reliable than browser-based extraction
+**On the TV** (host):
+- Space = Play/Pause
+- Click buttons for skip, previous, etc.
 
-## 📖 Documentation
+**On phones**:
+- Search songs
+- Add to queue
+- Basic playback controls
 
-See [docs/design.md](docs/design.md) for the full technical documentation and architecture details.
+## 🛠️ Technical Stuff
 
-## 🚀 Status
+Built with:
+- **yt-dlp** - The real MVP, extracts YouTube URLs
+- **Express** - Web server
+- **WebSocket** - Real-time sync
+- **MSE** - For HD streaming (when it works)
 
-✅ **Ready to use!** The core functionality is complete and working.
+Files live in:
+- `server/` - Backend stuff
+- `public/` - Frontend stuff
+- `data/` - Saved queues and cookies
+
+## 🐛 Common Issues
+
+**"yt-dlp not found"**
+- Just run: `pip3 install yt-dlp`
+
+**Videos won't load**
+- Update yt-dlp: `pip3 install --upgrade yt-dlp`
+- YouTube changes their stuff constantly, yt-dlp usually catches up
+
+**Can't connect from phone**
+- Make sure you're on the same WiFi
+- Firewall might be blocking port 8080
+
+**Looks janky**
+- Yeah, it's not pretty. PRs welcome if you want to make it look nice!
+
+## ⚠️ Disclaimers
+
+- This was made in a hurry for personal use
+- The code is functional but not clean
+- It might break when YouTube changes things
+- Use at your own risk
+- Respect content creators and YouTube ToS
+
+## 🤝 Contributing
+
+Feel free to fork and improve! Just don't expect quick responses on issues - this is a "works on my machine" project.
+
+## 🍺 License
+
+Beerware - If we meet someday and you think this is worth it, you can buy me a beer
 
 ---
 
-Made for karaoke parties 🎤🎉
+Made for parties where someone always hogs the karaoke mic 🎤
