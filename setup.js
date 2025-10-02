@@ -95,7 +95,35 @@ async function installYtDlp() {
 }
 
 async function setup() {
+  // Check if running in automated/CI mode
+  const isAutomated = process.env.CI || !process.stdin.isTTY;
+
   console.log('🎵 YT-Kara Setup\n');
+
+  if (isAutomated) {
+    // Automated install (npm postinstall)
+    console.log('Running automated setup...\n');
+
+    // Check yt-dlp but don't fail
+    const hasYtDlp = await checkYtDlp();
+    if (!hasYtDlp) {
+      console.log('⚠️  yt-dlp is not installed!');
+      console.log('   YT-Kara requires yt-dlp to extract YouTube videos.\n');
+      console.log('   Install it with one of:');
+      console.log('   • pip3 install yt-dlp');
+      console.log('   • brew install yt-dlp (macOS)');
+      console.log('   • sudo apt install yt-dlp (Ubuntu/Debian)\n');
+    }
+
+    console.log('✨ Setup complete! To start YT-Kara, run:');
+    console.log('   yt-kara\n');
+    if (!hasYtDlp) {
+      console.log('⚠️  Remember to install yt-dlp first!\n');
+    }
+    return;
+  }
+
+  // Interactive setup
   console.log('This app requires yt-dlp for reliable video extraction.\n');
 
   // Check if Python is installed
@@ -129,7 +157,7 @@ async function setup() {
     }
   }
 
-  // Install npm dependencies
+  // Install npm dependencies (only in interactive mode, not in postinstall)
   console.log('\n📦 Installing Node.js dependencies...\n');
   try {
     await execPromise('npm install');

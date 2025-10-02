@@ -1,5 +1,8 @@
 # YT-Kara 🎤
 
+[![npm version](https://badge.fury.io/js/yt-kara.svg)](https://www.npmjs.com/package/yt-kara)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
 A karaoke web app thrown together for parties - plays YouTube videos on a TV while friends control the queue from their phones. Vibe-coded quickly with Claude Code to solve a real problem: every karaoke app sucks or costs money.
 
 **Note**: This was built fast to work, not to be pretty. The code isn't the cleanest and it probably won't be actively maintained. But hey, it works! 🤷
@@ -20,7 +23,30 @@ A karaoke web app thrown together for parties - plays YouTube videos on a TV whi
 - Python 3+ (for yt-dlp)
 - A computer connected to a TV
 
-### Quick Setup
+### Quick Install (npm)
+
+```bash
+# Install globally
+npm install -g yt-kara
+
+# Install yt-dlp (required for video extraction)
+pip3 install yt-dlp
+
+# Start it
+yt-kara
+```
+
+Or use npx without installing:
+
+```bash
+# Install yt-dlp first
+pip3 install yt-dlp
+
+# Run directly
+npx yt-kara
+```
+
+### Alternative: Clone from Source
 
 ```bash
 # Clone it
@@ -36,24 +62,27 @@ npm start
 
 ### Manual Setup
 
-If the setup script fails:
+If automated setup fails:
 
 ```bash
 # Install yt-dlp (the magic that makes this work)
 pip3 install yt-dlp
+# or: brew install yt-dlp (macOS)
+# or: sudo apt install yt-dlp (Ubuntu/Debian)
 
-# Install node stuff
+# Install node stuff (if cloned from source)
 npm install
 
 # Run it
-npm start
+npm start  # from source
+# or: yt-kara  # if installed globally
 ```
 
 ## 🎮 How to Use
 
 ### Setup for Party
 
-1. Run `npm start` on computer connected to TV
+1. Run `yt-kara` on computer connected to TV
 2. Open `http://localhost:8080` on the TV browser
 3. Everyone scans the QR code with their phones
 4. Search and add songs

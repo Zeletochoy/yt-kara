@@ -1,0 +1,28 @@
+# Development and testing files
+.github/
+test/
+dev/
+screenshots/
+docs/
+
+# Git and IDE files
+.git/
+.gitignore
+.husky/
+.claude/
+.vscode/
+.idea/
+.DS_Store
+
+# Development config files
+CLAUDE.md
+eslint.config.js
+.eslintrc*
+
+# Logs and data
+*.log
+data/
+
+# CI/CD
+.travis.yml
+.circleci/

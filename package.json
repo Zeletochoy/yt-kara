@@ -1,8 +1,11 @@
 {
   "name": "yt-kara",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "description": "Karaoke webapp for parties using YouTube videos",
   "main": "server/index.js",
+  "bin": {
+    "yt-kara": "./bin/yt-kara.js"
+  },
   "scripts": {
     "setup": "node setup.js",
     "start": "node server/index.js",
@@ -11,7 +14,8 @@
     "test": "node test/test-runner.js",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
-    "prepare": "husky"
+    "prepare": "husky",
+    "postinstall": "node setup.js"
   },
   "lint-staged": {
     "*.js": [
@@ -22,10 +26,25 @@
     "karaoke",
     "youtube",
     "party",
-    "webapp"
+    "webapp",
+    "music",
+    "entertainment",
+    "cli"
   ],
-  "author": "",
+  "author": "Antoine Lecubin <https://github.com/Zeletochoy>",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Zeletochoy/yt-kara.git"
+  },
+  "bugs": {
+    "url": "https://github.com/Zeletochoy/yt-kara/issues"
+  },
+  "homepage": "https://github.com/Zeletochoy/yt-kara#readme",
+  "preferGlobal": true,
+  "engines": {
+    "node": ">=18.0.0"
+  },
   "dependencies": {
     "express": "^4.18.2",
     "qrcode": "^1.5.4",
