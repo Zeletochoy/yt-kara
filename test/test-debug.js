@@ -109,7 +109,7 @@ async function debugVideoLoading() {
 if (require.main === module) {
   TestHelper.withServer(debugVideoLoading)
     .then(() => process.exit(0))
-    .catch(() => process.exit(1));
+    .catch((error) => { console.error('\n❌ Test failed:', error); process.exit(1); });
 }
 
 module.exports = debugVideoLoading;

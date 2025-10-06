@@ -47,6 +47,10 @@ async function testPlaybackControls() {
     // Test play/pause
     console.log('  Testing play/pause...');
 
+    // Switch to remote tab for playback controls
+    await clientPage.click('[data-tab="remote"]');
+    await new Promise(r => setTimeout(r, 1000));
+
     // Wait for video to load and start playing
     console.log('    Waiting for video to load...');
     await new Promise(r => setTimeout(r, 8000)); // Give more time for video to load
@@ -78,7 +82,8 @@ async function testPlaybackControls() {
     }
 
     // Pause
-    await clientPage.click('#play-pause');
+    await clientPage.waitForSelector('#remote-play-pause', { visible: true });
+    await clientPage.click('#remote-play-pause');
     await new Promise(r => setTimeout(r, 1500));
 
     const pausedState = await karaokePage.evaluate(() => {
@@ -89,7 +94,8 @@ async function testPlaybackControls() {
     console.log('    ✓ Pause works');
 
     // Play
-    await clientPage.click('#play-pause');
+    await clientPage.waitForSelector('#remote-play-pause', { visible: true });
+    await clientPage.click('#remote-play-pause');
     await new Promise(r => setTimeout(r, 1500));
 
     // Check playing state (commented out due to autoplay policies)
@@ -99,6 +105,10 @@ async function testPlaybackControls() {
 
     // Test skip with multiple songs
     console.log('  Testing skip...');
+
+    // Switch to search tab to add another song
+    await clientPage.click('[data-tab="search"]');
+    await new Promise(r => setTimeout(r, 500));
 
     // Add another song
     await clientPage.evaluate(() => {
@@ -125,8 +135,10 @@ async function testPlaybackControls() {
       return video?.src;
     });
 
-    // Skip
-    await clientPage.click('#skip');
+    // Skip - switch back to remote tab first
+    await clientPage.click('[data-tab="remote"]');
+    await new Promise(r => setTimeout(r, 500));
+    await clientPage.click('#remote-skip');
     await new Promise(r => setTimeout(r, 4000));
 
     // Check video changed and old one stopped
@@ -144,7 +156,9 @@ async function testPlaybackControls() {
 
     // Test skip with empty queue
     console.log('  Testing skip with empty queue...');
-    await clientPage.click('#skip');
+    await clientPage.click('[data-tab="remote"]');
+    await new Promise(r => setTimeout(r, 500));
+    await clientPage.click('#remote-skip');
     await new Promise(r => setTimeout(r, 3000));
 
     const emptyQueueState = await karaokePage.evaluate(() => {
@@ -178,7 +192,7 @@ if (require.main === module) {
   // Run with server management when executed directly
   TestHelper.withServer(testPlaybackControls)
     .then(() => process.exit(0))
-    .catch(() => process.exit(1));
+    .catch((error) => { console.error('\n❌ Test failed:', error); process.exit(1); });
 }
 
 module.exports = testPlaybackControls;

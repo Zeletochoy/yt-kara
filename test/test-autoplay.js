@@ -104,7 +104,7 @@ async function testAutoplay() {
 if (require.main === module) {
   TestHelper.withServer(testAutoplay)
     .then(() => process.exit(0))
-    .catch(() => process.exit(1));
+    .catch((error) => { console.error('\n❌ Test failed:', error); process.exit(1); });
 }
 
 module.exports = testAutoplay;

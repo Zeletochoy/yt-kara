@@ -69,7 +69,7 @@ if (require.main === module) {
   // Run with server management when executed directly
   TestHelper.withServer(testBasicConnectivity)
     .then(() => process.exit(0))
-    .catch(() => process.exit(1));
+    .catch((error) => { console.error('\n❌ Test failed:', error); process.exit(1); });
 }
 
 module.exports = testBasicConnectivity;

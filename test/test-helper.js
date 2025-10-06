@@ -1,5 +1,6 @@
 const { spawn } = require('child_process');
 const path = require('path');
+const fs = require('fs');
 const puppeteer = require('puppeteer');
 
 class TestHelper {
@@ -9,9 +10,20 @@ class TestHelper {
     // Kill any existing servers first
     await TestHelper.killExistingServers();
 
+    // Delete test state file for clean test environment (NOT the real session-state.json!)
+    const testStateFile = path.join(__dirname, '..', 'data', 'session-state.test.json');
+    try {
+      if (fs.existsSync(testStateFile)) {
+        fs.unlinkSync(testStateFile);
+      }
+    } catch (error) {
+      console.error('Failed to delete test state file:', error);
+    }
+
     return new Promise((resolve, reject) => {
       TestHelper.server = spawn('npm', ['start'], {
         cwd: path.join(__dirname, '..'),
+        env: { ...process.env, TEST_MODE: 'true' }, // Use test state file
         stdio: 'pipe'
       });
 
@@ -70,6 +82,7 @@ class TestHelper {
   static launchBrowser() {
     return puppeteer.launch({
       headless: 'new',
+      protocolTimeout: 300000, // 5 minutes for slow operations
       args: [
         '--autoplay-policy=no-user-gesture-required',
         '--disable-features=PreloadMediaEngagementData,MediaEngagementBypassAutoplayPolicies'

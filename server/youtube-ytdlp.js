@@ -49,7 +49,7 @@ class YouTubeService {
       if (fs.existsSync(this.cookiesFile)) {
         console.log('✓ Cookies cached successfully');
       }
-    } catch (error) {
+    } catch {
       console.log('⚠ Could not cache cookies. Videos may be restricted.');
     }
   }

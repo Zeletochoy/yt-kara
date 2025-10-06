@@ -33,7 +33,7 @@ async function testSearchAndQueue() {
     assert(searchResults.count > 0, 'Should have search results');
     console.log(`    ✓ Found ${searchResults.count} results`);
 
-    // Add song to queue
+    // Add first song (becomes current song)
     console.log('  Testing add to queue...');
     await clientPage.evaluate(() => {
       const btn = document.querySelector('.song-action');
@@ -43,6 +43,18 @@ async function testSearchAndQueue() {
       } else if (typeof addToQueue === 'function') {
         // eslint-disable-next-line no-undef
         addToQueue(0);
+      }
+    });
+    await new Promise(r => setTimeout(r, 2000));
+
+    // Add second song (goes into queue)
+    await clientPage.evaluate(() => {
+      const btns = document.querySelectorAll('.song-action');
+      if (btns[1] && btns[1].onclick) {
+        btns[1].click();
+      } else if (typeof addToQueue === 'function') {
+        // eslint-disable-next-line no-undef
+        addToQueue(1);
       }
     });
     await new Promise(r => setTimeout(r, 2000));
@@ -60,7 +72,7 @@ async function testSearchAndQueue() {
     });
 
     assert(clientQueue.count === 1, 'Should have 1 item in client queue');
-    console.log('    ✓ Song added to client queue');
+    console.log('    ✓ Song added to queue');
 
     // Check karaoke display
     const karaokeState = await karaokePage.evaluate(() => {
@@ -123,7 +135,7 @@ if (require.main === module) {
   // Run with server management when executed directly
   TestHelper.withServer(testSearchAndQueue)
     .then(() => process.exit(0))
-    .catch(() => process.exit(1));
+    .catch((error) => { console.error('\n❌ Test failed:', error); process.exit(1); });
 }
 
 module.exports = testSearchAndQueue;

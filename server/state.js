@@ -4,7 +4,9 @@ const path = require('path');
 // Session state management
 class SessionState {
   constructor() {
-    this.stateFile = path.join(__dirname, '..', 'data', 'session-state.json');
+    // Use separate state file for tests to avoid corrupting real session data
+    const stateFileName = process.env.TEST_MODE ? 'session-state.test.json' : 'session-state.json';
+    this.stateFile = path.join(__dirname, '..', 'data', stateFileName);
     this.ensureDataDirectory();
     this.loadState();
     this.saveInterval = setInterval(() => this.saveState(), 5000); // Auto-save every 5 seconds
@@ -130,6 +132,7 @@ class SessionState {
       this.currentSong = this.queue.shift();
       this.currentTime = 0;
       this.isPlaying = true;
+      this.saveState();
       return this.currentSong;
     } else {
       this.currentSong = null;

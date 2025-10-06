@@ -90,9 +90,17 @@ async function handleMessage(wss, ws, clientId, message) {
     if (message.song) {
       state.addSong(message.song, clientId);
 
+      // Prefetch the URL for this song
+      youtube.prefetchVideoUrl(message.song.videoId);
+
       // If no song is playing, start playing
       if (!state.currentSong) {
         state.playNext();
+
+        // Prefetch the next song if there is one
+        if (state.queue.length > 0) {
+          youtube.prefetchVideoUrl(state.queue[0].videoId);
+        }
       }
 
       broadcastState(wss);
@@ -109,10 +117,17 @@ async function handleMessage(wss, ws, clientId, message) {
     broadcastState(wss);
     break;
 
-  case 'SKIP_SONG':
+  case 'SKIP_SONG': {
     state.playNext();
+
+    // Prefetch the next song after skipping
+    if (state.queue.length > 0) {
+      youtube.prefetchVideoUrl(state.queue[0].videoId);
+    }
+
     broadcastState(wss);
     break;
+  }
 
   case 'PREVIOUS_SONG':
     state.playPrevious();
