@@ -80,13 +80,20 @@ class TestHelper {
   }
 
   static launchBrowser() {
+    const args = [
+      '--autoplay-policy=no-user-gesture-required',
+      '--disable-features=PreloadMediaEngagementData,MediaEngagementBypassAutoplayPolicies'
+    ];
+
+    // Add --no-sandbox in CI environments (required for GitHub Actions)
+    if (process.env.CI) {
+      args.push('--no-sandbox', '--disable-setuid-sandbox');
+    }
+
     return puppeteer.launch({
       headless: 'new',
       protocolTimeout: 300000, // 5 minutes for slow operations
-      args: [
-        '--autoplay-policy=no-user-gesture-required',
-        '--disable-features=PreloadMediaEngagementData,MediaEngagementBypassAutoplayPolicies'
-      ]
+      args
     });
   }
 }
