@@ -1,0 +1,17 @@
+services:
+  yt-kara:
+    build: .
+    ports:
+      - "8080:8080"
+    volumes:
+      # Persist session data (queue, history, cookies)
+      - ./data:/app/data
+    environment:
+      - NODE_ENV=production
+    restart: unless-stopped
+    networks:
+      - yt-kara-network
+
+networks:
+  yt-kara-network:
+    driver: bridge

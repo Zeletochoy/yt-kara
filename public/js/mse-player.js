@@ -296,7 +296,6 @@ class MSEPlayer {
 
         if (buffer.buffered.length > 0) {
           const bufferedEnd = buffer.buffered.end(buffer.buffered.length - 1);
-          const bufferedStart = buffer.buffered.start(0);
           const bufferedAmount = bufferedEnd - this.video.currentTime;
 
           if (bufferedAmount > this.maxBufferLength) {
@@ -308,7 +307,7 @@ class MSEPlayer {
         } else {
           break;
         }
-      } catch (error) {
+      } catch {
         // Buffer was likely removed, exit gracefully
         break;
       }

@@ -46,6 +46,21 @@ pip3 install yt-dlp
 npx yt-kara
 ```
 
+### Alternative: Docker
+
+```bash
+# Clone the repo
+git clone https://github.com/Zeletochoy/yt-kara.git
+cd yt-kara
+
+# Run with docker-compose
+docker-compose up -d
+
+# Or build and run manually
+docker build -t yt-kara .
+docker run -p 8080:8080 -v $(pwd)/data:/app/data yt-kara
+```
+
 ### Alternative: Clone from Source
 
 ```bash

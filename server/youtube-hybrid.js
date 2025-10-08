@@ -7,7 +7,7 @@ let YouTubeJS;
 try {
   const { Innertube } = require('youtubei.js');
   YouTubeJS = { Innertube };
-} catch (e) {
+} catch {
   console.log('YouTube.js not available');
 }
 

@@ -4,7 +4,7 @@ const WebSocket = require('ws');
 const path = require('path');
 const os = require('os');
 
-const state = require('./state');
+require('./state');
 const youtube = require('./youtube-ytdlp');
 const { setupWebSocket } = require('./websocket');
 

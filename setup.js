@@ -39,6 +39,10 @@ async function installYtDlp() {
   // Detect OS and use appropriate installation method
   const platform = process.platform;
 
+  // Check if running as root (e.g., in Docker)
+  // Note: sudo variable was removed as it's not used - install methods handle permissions themselves
+  const isRoot = process.getuid && process.getuid() === 0;
+
   try {
     if (platform === 'darwin') {
       // macOS
@@ -53,24 +57,10 @@ async function installYtDlp() {
         await execPromise('pip3 install --user yt-dlp');
       }
     } else if (platform === 'linux') {
-      // Linux
-      try {
-        // Try apt-get first (Debian/Ubuntu)
-        await execPromise('which apt-get');
-        console.log('Using apt-get to install yt-dlp...');
-        await execPromise('sudo apt-get update && sudo apt-get install -y yt-dlp');
-      } catch {
-        try {
-          // Try yum (RedHat/CentOS)
-          await execPromise('which yum');
-          console.log('Using yum to install yt-dlp...');
-          await execPromise('sudo yum install -y yt-dlp');
-        } catch {
-          // Fallback to pip
-          console.log('Using pip to install yt-dlp...');
-          await execPromise('pip3 install --user yt-dlp');
-        }
-      }
+      // Linux - prefer pip for latest version (apt/yum packages are often outdated)
+      console.log('Using pip to install yt-dlp (for latest version)...');
+      const pipFlags = isRoot ? '--break-system-packages ' : '--user ';
+      await execPromise(`pip3 install ${pipFlags}yt-dlp`);
     } else if (platform === 'win32') {
       // Windows
       console.log('Using pip to install yt-dlp...');
@@ -78,7 +68,8 @@ async function installYtDlp() {
     } else {
       // Unknown platform, try pip
       console.log('Using pip to install yt-dlp...');
-      await execPromise('pip3 install --user yt-dlp');
+      const pipFlags = isRoot ? '--break-system-packages ' : '--user ';
+      await execPromise(`pip3 install ${pipFlags}yt-dlp`);
     }
 
     console.log('✅ yt-dlp installed successfully!');
