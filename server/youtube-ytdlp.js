@@ -55,10 +55,7 @@ class YouTubeService {
   }
 
   getCookiesArg() {
-    if (fs.existsSync(this.cookiesFile)) {
-      return ` --cookies "${this.cookiesFile}"`;
-    }
-    return '';
+    return ' --cookies-from-browser chrome';
   }
 
 

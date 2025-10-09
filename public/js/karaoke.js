@@ -11,10 +11,6 @@ const totalTimeEl = document.getElementById('total-time');
 let currentVideoUrl = null;
 let playbackUpdateInterval = null;
 
-// MSE player instance for HD playback
-let msePlayer = null;
-const useHDMode = true; // Enable HD mode by default
-
 // Initialize
 document.addEventListener('DOMContentLoaded', () => {
   setupConnection();
@@ -227,21 +223,13 @@ function setupHostControls() {
 
   seekBackBtn?.addEventListener('click', () => {
     const newTime = Math.max(0, videoPlayer.currentTime - 10);
-    if (msePlayer && useHDMode) {
-      msePlayer.seek(newTime);
-    } else {
-      videoPlayer.currentTime = newTime;
-    }
+    videoPlayer.currentTime = newTime;
     wsConnection.seek(newTime);
   });
 
   seekForwardBtn?.addEventListener('click', () => {
     const newTime = Math.min(videoPlayer.duration || 0, videoPlayer.currentTime + 10);
-    if (msePlayer && useHDMode) {
-      msePlayer.seek(newTime);
-    } else {
-      videoPlayer.currentTime = newTime;
-    }
+    videoPlayer.currentTime = newTime;
     wsConnection.seek(newTime);
   });
 
@@ -319,7 +307,6 @@ async function loadVideo(song, isPlaying = true) {
   // Check if it's the same video BEFORE cleaning up
   if (currentVideoUrl?.videoId === song.videoId) {
     console.log('Same video, skipping load');
-    // If MSE player exists and video is playing properly, keep it
     // If video element has an error, clean up and reload
     if (videoPlayer.error || !videoPlayer.src) {
       console.log('Video has error or no src, cleaning up and reloading');
@@ -329,20 +316,13 @@ async function loadVideo(song, isPlaying = true) {
     }
   }
 
-  // Clean up existing MSE player FIRST before touching video element
-  if (msePlayer) {
-    msePlayer.destroy();
-    msePlayer = null;
-  }
-
   // Stop and clean up current video
   videoPlayer.pause();
   videoPlayer.removeAttribute('src');
   videoPlayer.load(); // Reset the video element
 
   try {
-
-    const response = await fetch(`/api/video/${song.videoId}?hd=${useHDMode}`);
+    const response = await fetch(`/api/video/${song.videoId}`);
     const videoInfo = await response.json();
 
     // Check if the API call failed
@@ -384,82 +364,38 @@ async function loadVideo(song, isPlaying = true) {
       }
     };
 
-    // Use MSE player for HD mode if available
-    if (useHDMode && videoInfo.hdMode && videoInfo.videoUrl && videoInfo.audioUrl) {
-      console.log('[KARAOKE] Using MSE player for HD playback');
+    // Standard playback with cached file
+    console.log('Using standard player with cached file:', videoInfo.url);
+    videoPlayer.src = videoInfo.url;
+    videoPlayer.style.display = 'block';
+    noVideoDiv.style.display = 'none';
+    currentInfo.style.display = 'flex';
 
-      videoPlayer.style.display = 'block';
-      noVideoDiv.style.display = 'none';
-      currentInfo.style.display = 'flex';
+    // Force load to start
+    videoPlayer.load();
 
-      msePlayer = new MSEPlayer(videoPlayer);
+    // Try to play immediately
+    setTimeout(() => tryAutoplay(), 100);
 
-      // Use proxy endpoints for streaming (avoids CORS issues)
-      const videoStreamUrl = `/api/stream/video/${song.videoId}`;
-      const audioStreamUrl = `/api/stream/audio/${song.videoId}`;
+    // Listen for when video is ready
+    videoPlayer.addEventListener('loadedmetadata', () => {
+      console.log('Video metadata loaded, readyState:', videoPlayer.readyState);
+      tryAutoplay();
+    }, { once: true });
 
-      try {
-        await msePlayer.load(
-          videoStreamUrl,
-          audioStreamUrl,
-          videoInfo.videoCodec,
-          videoInfo.audioCodec,
-          videoInfo.videoExt,
-          videoInfo.audioExt
-        );
-        console.log('[KARAOKE] MSE player loaded successfully');
-      } catch (error) {
-        console.error('[KARAOKE] MSE player load failed:', error);
-        throw error;
-      }
+    // Also try playing when video can play
+    videoPlayer.addEventListener('canplay', () => {
+      console.log('Video can play, readyState:', videoPlayer.readyState);
+      tryAutoplay();
+    }, { once: true });
 
-      // For MSE player, trigger play directly
-      if (isPlaying) {
-        videoPlayer.muted = true;
-        msePlayer.play().then(() => {
-          console.log('MSE autoplay successful, unmuting...');
-          setTimeout(() => {
-            videoPlayer.muted = false;
-          }, 100);
-        }).catch(e => {
-          console.error('MSE autoplay failed:', e);
-          videoPlayer.muted = false;
-        });
-      }
-    } else {
-      // Standard playback
-      console.log('Using standard player, readyState:', videoPlayer.readyState);
-      videoPlayer.src = videoInfo.url || videoInfo.url;
-      videoPlayer.style.display = 'block';
-      noVideoDiv.style.display = 'none';
-      currentInfo.style.display = 'flex';
+    console.log('Video src set, checking readyState:', videoPlayer.readyState);
 
-      // Force load to start
-      videoPlayer.load();
-
-      // Try to play immediately
-      setTimeout(() => tryAutoplay(), 100);
-
-      // Listen for when video is ready
-      videoPlayer.addEventListener('loadedmetadata', () => {
-        console.log('Video metadata loaded, readyState:', videoPlayer.readyState);
-        tryAutoplay();
-      }, { once: true });
-
-      // Also try playing when video can play
-      videoPlayer.addEventListener('canplay', () => {
-        console.log('Video can play, readyState:', videoPlayer.readyState);
-        tryAutoplay();
-      }, { once: true });
-
-      console.log('Video src set, checking readyState:', videoPlayer.readyState);
-
-      // If video is already ready, try to play immediately
-      if (videoPlayer.readyState >= 2) {
-        console.log('Video already ready, attempting autoplay');
-        tryAutoplay();
-      }
-    } // Close else block for standard playback
+    // If video is already ready, try to play immediately
+    if (videoPlayer.readyState >= 2) {
+      console.log('Video already ready, attempting autoplay');
+      tryAutoplay();
+    }
   } catch (error) {
     console.error('Failed to load video:', error);
     // Skip to next on error

@@ -34,7 +34,8 @@ export default [
         __dirname: 'readonly',
         require: 'readonly',
         module: 'readonly',
-        exports: 'readonly'
+        exports: 'readonly',
+        setImmediate: 'readonly'
       }
     },
     rules: {

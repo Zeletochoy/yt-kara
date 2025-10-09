@@ -239,9 +239,9 @@ This architecture ensures perfect synchronization while keeping the server light
 
 | Endpoint | Method | Description | Response |
 |----------|--------|-------------|----------|
-| `/api/video/:id` | GET | Get video stream URL | `VideoInfo` |
-| `/api/stats` | GET | Get session statistics | `Statistics` |
-| `/api/history` | GET | Get play history | `HistoryItem[]` |
+| `/api/video/:id` | GET | Get video info (triggers cache if needed) | `{ url, title, duration }` |
+| `/api/stream/:id` | GET | Stream cached video file | Video file (supports range requests) |
+| `/api/network-info` | GET | Get server network info | `{ ip, port }` |
 
 ### WebSocket API
 
@@ -279,9 +279,15 @@ All queue management, search, and playback control happens via WebSocket message
 - `connectedAt`: Connection timestamp
 
 **VideoInfo** - Video playback information:
-- `url`: Direct stream URL from YouTube
-- `expiresAt`: When URL expires (typically 6 hours)
-- `quality`: Video quality options available
+- `url`: Stream endpoint for cached video (`/api/stream/:id`)
+- `title`: Video title from YouTube
+- `duration`: Video duration in seconds
+
+**CachedVideo** - Locally cached video metadata:
+- `videoFile`: Filename of muxed MP4 file
+- `duration`: Video duration in seconds
+- `title`: Video title
+- `downloadedAt`: Timestamp when downloaded
 
 ### Simplified State Management
 
@@ -362,26 +368,45 @@ With the backend-centric design, data models are simpler:
 
 ```mermaid
 flowchart TD
-    A[Song starts playing] --> B[Server checks URL cache]
-    B --> C{URL cached & valid?}
-    C -->|No| D[YouTube.js extracts URL]
-    C -->|Yes| E[Use cached URL]
-    D --> F[Cache URL on server]
-    F --> E
-    E --> G[Send URL to Karaoke View]
-    G --> H[Load in HTML5 player]
-    H --> I[Start playback]
-    I --> J[Report progress to server]
+    A[Song starts playing] --> B[Server checks cache]
+    B --> C{Video cached locally?}
+    C -->|No| D[yt-dlp downloads video]
+    C -->|Yes| E[Use cached file]
+    D --> F[Store as muxed MP4]
+    F --> G[Save metadata]
+    G --> E
+    E --> H[Serve via /api/stream/:id]
+    H --> I[Load in HTML5 player]
+    I --> J[Start playback]
+    J --> K[Report progress to server]
 ```
+
+**Key Features:**
+- Downloads complete video files (720p max, H.264+AAC)
+- Single muxed file for simpler playback
+- Sequential download queue to avoid YouTube rate limits
+- Automatic cleanup: keeps current + last 2 played + all queued songs
+- Standard HTML5 video playback (no MSE complexity)
 
 ### Server-Side Caching
 
 The backend handles all caching:
 
-1. **Stream URLs**: Cached for 5 hours (YouTube URLs expire after ~6 hours)
-2. **Search Results**: Cached for 1 hour
-3. **Video Metadata**: Cached for 24 hours
-4. **Thumbnails**: URLs cached indefinitely
+1. **Video Files**: Downloaded locally as muxed MP4 files (720p max)
+   - Format: H.264 video + AAC audio in single container
+   - Stored in `data/cache/{videoId}/video.mp4`
+   - Metadata stored in `data/cache/{videoId}/metadata.json`
+   - Cleanup strategy: current + last 2 played + all queued songs
+
+2. **Download Queue**: Sequential processing to avoid rate limits
+   - Prefetch all queued videos in background
+   - One download at a time
+   - Automatic retry on failure
+
+3. **Authentication**: Uses `yt-dlp --cookies-from-browser chrome`
+   - Reads cookies directly from Chrome browser
+   - Avoids cookie expiration issues
+   - No manual cookie management needed
 
 ### Connection Management
 
@@ -436,9 +461,9 @@ yt-kara/
 ├── server/
 │   ├── index.js           # Express + WebSocket server
 │   ├── state.js           # Session state management
-│   ├── youtube.js         # YouTube.js integration
+│   ├── youtube-ytdlp.js   # yt-dlp integration for video extraction
 │   ├── websocket.js       # WebSocket message handling
-│   ├── cache.js           # URL and data caching
+│   ├── cache-manager.js   # Local video file caching with download queue
 │   └── package.json       # Backend dependencies
 ├── public/
 │   ├── index.html         # Karaoke view (TV)
@@ -451,15 +476,19 @@ yt-kara/
 │   │   ├── karaoke.js    # Karaoke view logic
 │   │   ├── client.js     # Client view logic
 │   │   ├── websocket.js  # WebSocket client
-│   │   ├── player.js     # Video player wrapper
 │   │   └── utils.js      # Helper functions
 │   └── lib/
 │       └── qrcode.min.js # QR code generator
-├── design/
-│   ├── features.md       # Feature requirements
-│   └── doc.md           # This document
-├── package.json         # Root package.json
-└── README.md           # Setup instructions
+├── data/
+│   ├── cache/            # Cached video files by videoId
+│   ├── cookies.txt       # YouTube authentication cookies
+│   └── state.json        # Persisted session state
+├── docs/
+│   └── design.md         # This document
+├── dev/
+│   └── visual-test.js    # Puppeteer visual testing
+├── package.json          # Root package.json
+└── README.md             # Setup instructions
 ```
 
 ## Security Considerations

@@ -1,9 +1,12 @@
 const WebSocket = require('ws');
 const state = require('./state');
 const youtube = require('./youtube-ytdlp');
+const cacheManager = require('./cache-manager');
 
 let clientIdCounter = 1;
 const clientNames = new Map();
+let previousSongId = null;
+let lastSongId = null;
 
 function setupWebSocket(wss) {
   wss.on('connection', (ws) => {
@@ -190,6 +193,58 @@ function broadcastState(wss) {
     type: 'STATE_UPDATE',
     state: state.getState()
   });
+
+  // Handle cache management
+  manageCacheForCurrentState();
+}
+
+function manageCacheForCurrentState() {
+  const currentState = state.getState();
+  const currentSongId = currentState.currentSong?.videoId;
+
+  // Prefetch all videos in queue
+  if (currentState.queue.length > 0) {
+    const queueVideoIds = currentState.queue.map(song => song.videoId);
+    cacheManager.prefetchVideos(queueVideoIds);
+  }
+
+  // Cleanup: when song changes, delete old videos
+  if (currentSongId && currentSongId !== lastSongId) {
+    // Song changed - cleanup old videos
+    const toKeep = new Set();
+
+    // Keep current song
+    if (currentSongId) {
+      toKeep.add(currentSongId);
+    }
+
+    // Keep last 2 played songs
+    const history = currentState.history || [];
+    history.slice(-2).forEach(song => toKeep.add(song.videoId));
+
+    // Keep all queued songs
+    currentState.queue.forEach(song => toKeep.add(song.videoId));
+
+    // Delete everything else
+    const fs = require('fs');
+    const path = require('path');
+    const cacheDir = path.join(__dirname, '..', 'data', 'cache');
+
+    if (fs.existsSync(cacheDir)) {
+      const allCached = fs.readdirSync(cacheDir);
+      allCached.forEach(videoId => {
+        if (!toKeep.has(videoId)) {
+          cacheManager.deleteVideo(videoId);
+        }
+      });
+    }
+
+    // Track song change
+    if (previousSongId !== lastSongId) {
+      previousSongId = lastSongId;
+    }
+    lastSongId = currentSongId;
+  }
 }
 
 module.exports = { setupWebSocket };
