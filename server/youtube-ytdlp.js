@@ -55,6 +55,10 @@ class YouTubeService {
   }
 
   getCookiesArg() {
+    // In CI environments, don't try to use Chrome cookies (they don't exist)
+    if (process.env.CI) {
+      return '';
+    }
     return ' --cookies-from-browser chrome';
   }
 
