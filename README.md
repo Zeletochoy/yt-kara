@@ -16,6 +16,14 @@ A karaoke web app thrown together for parties - plays YouTube videos on a TV whi
 - 💾 **Persistent Queue** - Survives server restarts
 - 🔄 **Real-time Sync** - All devices stay in sync
 
+## Screenshots
+
+### Player
+<img width="2616" height="1572" alt="Screenshot 2025-10-09 at 11 45 48" src="https://github.com/user-attachments/assets/c80ffb3a-479d-4c13-a725-7ae452d4f31e" />
+
+### Remote control
+<img width="409" height="739" alt="Screenshot 2025-10-08 at 17 58 04" src="https://github.com/user-attachments/assets/bbb89974-b106-4562-9e7a-4b9173534ffb" />
+
 ## 📦 Installation
 
 ### Requirements
@@ -41,6 +49,7 @@ Or use npx without installing:
 ```bash
 # Install yt-dlp first
 pip3 install yt-dlp
+
 
 # Run directly
 npx yt-kara
