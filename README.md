@@ -148,6 +148,12 @@ Files live in:
 **Can't connect from phone**
 - Make sure you're on the same WiFi
 - Firewall might be blocking port 8080
+- If your WiFi has AP Isolation (common in corporate/public WiFi), use tunnel mode:
+  ```bash
+  ENABLE_TUNNEL=true yt-kara
+  # or: ENABLE_TUNNEL=true npm start
+  ```
+  This creates a public tunnel URL that bypasses network restrictions. The server will display a password (your public IP) that clients need to enter on first visit.
 
 **Looks janky**
 - Yeah, it's not pretty. PRs welcome if you want to make it look nice!

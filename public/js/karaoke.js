@@ -52,10 +52,11 @@ async function setupQRCode() {
   try {
     // Fetch network info from the server
     const response = await fetch('/api/network-info');
-    const { ip, port } = await response.json();
+    const data = await response.json();
+    const { url, password } = data;
 
-    // Use network IP for the QR code
-    const networkUrl = `http://${ip}:${port}/client`;
+    // Append /client path to the base URL
+    const networkUrl = `${url}/client`;
 
     // Generate QR code
     const qrContainer = document.getElementById('qr-code');
@@ -91,6 +92,16 @@ async function setupQRCode() {
     const qrLink = document.getElementById('qr-link');
     if (qrLink) {
       qrLink.href = networkUrl;
+    }
+
+    // Display password if using tunnel
+    if (password) {
+      const passwordContainer = document.getElementById('tunnel-password');
+      const passwordValue = document.getElementById('password-value');
+      if (passwordContainer && passwordValue) {
+        passwordValue.textContent = password;
+        passwordContainer.style.display = 'block';
+      }
     }
 
     console.log('QR code generated successfully with network URL:', networkUrl);
