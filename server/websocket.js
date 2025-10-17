@@ -174,6 +174,16 @@ async function handleMessage(wss, ws, clientId, message) {
     broadcastState(wss);
     break;
 
+  case 'SET_VOLUME':
+    state.setVolume(message.volume);
+    broadcastState(wss);
+    break;
+
+  case 'SET_PITCH':
+    state.setPitch(message.pitch);
+    broadcastState(wss);
+    break;
+
   default:
     console.warn(`Unknown message type: ${message.type}`);
   }

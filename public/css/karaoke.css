@@ -333,6 +333,113 @@ body {
   background: rgba(50, 50, 50, 0.9);
 }
 
+/* Volume Control */
+#volume-control {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 10px;
+  justify-content: center;
+  padding: 8px 16px;
+  background: rgba(30, 30, 30, 0.6);
+  border-radius: 8px;
+  border: 1px solid rgba(74, 85, 104, 0.2);
+}
+
+#volume-control i {
+  color: #a0aec0;
+  font-size: 16px;
+}
+
+#volume-slider {
+  flex: 1;
+  max-width: 150px;
+  height: 6px;
+  -webkit-appearance: none;
+  appearance: none;
+  background: rgba(74, 85, 104, 0.3);
+  border-radius: 3px;
+  outline: none;
+}
+
+#volume-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 16px;
+  height: 16px;
+  background: #4299e1;
+  border-radius: 50%;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+#volume-slider::-webkit-slider-thumb:hover {
+  background: #3182ce;
+}
+
+#volume-slider::-moz-range-thumb {
+  width: 16px;
+  height: 16px;
+  background: #4299e1;
+  border-radius: 50%;
+  cursor: pointer;
+  border: none;
+  transition: background 0.2s ease;
+}
+
+#volume-slider::-moz-range-thumb:hover {
+  background: #3182ce;
+}
+
+#volume-value {
+  min-width: 40px;
+  font-size: 14px;
+  color: #a0aec0;
+  text-align: right;
+}
+
+/* Pitch Control */
+#pitch-control {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 10px;
+  justify-content: center;
+  padding: 8px 16px;
+  background: rgba(30, 30, 30, 0.6);
+  border-radius: 8px;
+  border: 1px solid rgba(74, 85, 104, 0.2);
+}
+
+.pitch-btn {
+  padding: 6px 12px;
+  background: rgba(74, 85, 104, 0.3);
+  border: 1px solid rgba(74, 85, 104, 0.4);
+  color: #e2e8f0;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: all 0.2s ease;
+}
+
+.pitch-btn:hover:not(:disabled) {
+  background: rgba(74, 85, 104, 0.5);
+  transform: scale(1.05);
+}
+
+.pitch-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+#pitch-value {
+  min-width: 35px;
+  font-size: 15px;
+  color: #4a9e8a;
+  text-align: center;
+  font-weight: 600;
+}
+
 /* Admin Controls Section */
 #admin-controls {
   background: rgba(20, 20, 20, 0.8);

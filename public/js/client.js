@@ -62,6 +62,37 @@ document.getElementById('remote-seek-forward')?.addEventListener('click', () => 
   wsConnection.seek(Math.min(duration, currentTime + 10));
 });
 
+// Volume control setup
+const volumeSlider = document.getElementById('volume-slider-remote');
+const volumeValue = document.getElementById('volume-value-remote');
+
+volumeSlider?.addEventListener('input', (e) => {
+  const volume = parseInt(e.target.value, 10);
+  volumeValue.textContent = `${volume}%`;
+  wsConnection.setVolume(volume);
+});
+
+// Pitch control setup
+const pitchUpBtn = document.getElementById('pitch-up-remote');
+const pitchDownBtn = document.getElementById('pitch-down-remote');
+let currentPitch = 0;
+
+pitchUpBtn?.addEventListener('click', () => {
+  if (currentPitch < 3) {
+    const newPitch = currentPitch + 1;
+    currentPitch = newPitch;
+    wsConnection.setPitch(newPitch);
+  }
+});
+
+pitchDownBtn?.addEventListener('click', () => {
+  if (currentPitch > -3) {
+    const newPitch = currentPitch - 1;
+    currentPitch = newPitch;
+    wsConnection.setPitch(newPitch);
+  }
+});
+
 function updatePlayPauseButton(isPlaying) {
   const btn = document.getElementById('remote-play-pause');
   if (btn) {
@@ -141,6 +172,29 @@ wsConnection.connect();
 
 // UI update functions
 function updateUI(state) {
+  // Update volume
+  if (state.volume !== undefined) {
+    const volumeSlider = document.getElementById('volume-slider-remote');
+    const volumeValue = document.getElementById('volume-value-remote');
+    if (volumeSlider && volumeValue) {
+      volumeSlider.value = state.volume;
+      volumeValue.textContent = `${state.volume}%`;
+    }
+  }
+
+  // Update pitch
+  if (state.pitch !== undefined) {
+    currentPitch = state.pitch;
+    const pitchValueEl = document.getElementById('pitch-value-remote');
+    const pitchUpBtn = document.getElementById('pitch-up-remote');
+    const pitchDownBtn = document.getElementById('pitch-down-remote');
+    if (pitchValueEl) {
+      pitchValueEl.textContent = state.pitch > 0 ? `+${state.pitch}` : `${state.pitch}`;
+    }
+    if (pitchUpBtn) pitchUpBtn.disabled = state.pitch >= 3;
+    if (pitchDownBtn) pitchDownBtn.disabled = state.pitch <= -3;
+  }
+
   // Update current song
   if (state.currentSong) {
     currentSongEl.innerHTML = `

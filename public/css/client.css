@@ -483,6 +483,113 @@ header h1 {
   min-width: 100px;
 }
 
+/* Volume Control for Remote */
+#volume-control-remote {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  padding: 15px 20px;
+  background: rgba(30, 30, 30, 0.6);
+  border-radius: 8px;
+  border: 1px solid rgba(74, 85, 104, 0.2);
+  min-width: 280px;
+}
+
+#volume-control-remote i {
+  color: #a0aec0;
+  font-size: 18px;
+}
+
+#volume-slider-remote {
+  flex: 1;
+  height: 8px;
+  -webkit-appearance: none;
+  appearance: none;
+  background: rgba(74, 85, 104, 0.3);
+  border-radius: 4px;
+  outline: none;
+}
+
+#volume-slider-remote::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 24px;
+  height: 24px;
+  background: #4299e1;
+  border-radius: 50%;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+#volume-slider-remote::-webkit-slider-thumb:hover {
+  background: #3182ce;
+}
+
+#volume-slider-remote::-moz-range-thumb {
+  width: 24px;
+  height: 24px;
+  background: #4299e1;
+  border-radius: 50%;
+  cursor: pointer;
+  border: none;
+  transition: background 0.2s ease;
+}
+
+#volume-slider-remote::-moz-range-thumb:hover {
+  background: #3182ce;
+}
+
+#volume-value-remote {
+  min-width: 45px;
+  font-size: 16px;
+  color: #a0aec0;
+  text-align: right;
+  font-weight: 500;
+}
+
+/* Pitch Control for Remote */
+#pitch-control-remote {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  padding: 15px 20px;
+  background: rgba(30, 30, 30, 0.6);
+  border-radius: 8px;
+  border: 1px solid rgba(74, 85, 104, 0.2);
+  min-width: 200px;
+  justify-content: center;
+}
+
+.pitch-btn-remote {
+  padding: 12px 20px;
+  background: rgba(74, 85, 104, 0.4);
+  border: 1px solid rgba(74, 85, 104, 0.5);
+  color: #e2e8f0;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 16px;
+  transition: all 0.2s ease;
+  min-width: 50px;
+}
+
+.pitch-btn-remote:hover:not(:disabled) {
+  background: rgba(74, 85, 104, 0.6);
+  transform: scale(1.05);
+}
+
+.pitch-btn-remote:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+#pitch-value-remote {
+  min-width: 40px;
+  font-size: 18px;
+  color: #4a9e8a;
+  text-align: center;
+  font-weight: 700;
+}
+
 /* Empty States */
 .empty-state {
   text-align: center;

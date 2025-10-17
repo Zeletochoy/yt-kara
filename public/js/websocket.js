@@ -127,6 +127,14 @@ class WSConnection {
   resetHistory() {
     this.send({ type: 'RESET_HISTORY' });
   }
+
+  setVolume(volume) {
+    this.send({ type: 'SET_VOLUME', volume });
+  }
+
+  setPitch(pitch) {
+    this.send({ type: 'SET_PITCH', pitch });
+  }
 }
 
 // Create global connection instance

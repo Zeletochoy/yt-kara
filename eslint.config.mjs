@@ -27,6 +27,8 @@ export default [
         wsConnection: 'readonly',
         MSEPlayer: 'readonly',
         confirm: 'readonly',
+        CustomEvent: 'readonly',
+        Event: 'readonly',
 
         // Node globals
         process: 'readonly',

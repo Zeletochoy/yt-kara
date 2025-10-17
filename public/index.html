@@ -70,6 +70,16 @@
         <button id="host-skip" class="control-btn" title="Skip to next song in queue"><i class="fas fa-step-forward"></i></button>
         <button id="host-fullscreen" class="control-btn" title="Toggle fullscreen mode"><i class="fas fa-expand"></i></button>
       </div>
+      <div id="volume-control">
+        <i class="fas fa-volume-up"></i>
+        <input type="range" id="volume-slider" min="0" max="100" value="100" title="Adjust volume (0-100%)">
+        <span id="volume-value">100%</span>
+      </div>
+      <div id="pitch-control">
+        <button id="pitch-down" class="pitch-btn" title="Lower pitch by 1 semitone"><i class="fas fa-minus"></i></button>
+        <span id="pitch-value">+0</span>
+        <button id="pitch-up" class="pitch-btn" title="Raise pitch by 1 semitone"><i class="fas fa-plus"></i></button>
+      </div>
     </div>
   </div>
 

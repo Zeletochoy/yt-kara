@@ -17,6 +17,9 @@ document.addEventListener('DOMContentLoaded', () => {
   setupQRCode();
   setupVideoPlayer();
   setupHostControls();
+  setupVolumeControl();
+  setupPitchControl();
+  setupKeyboardShortcuts();
 
   // Fullscreen button
   document.getElementById('host-fullscreen')?.addEventListener('click', () => {
@@ -213,6 +216,65 @@ function setupVideoPlayer() {
   });
 }
 
+function setupVolumeControl() {
+  const volumeSlider = document.getElementById('volume-slider');
+  const volumeValue = document.getElementById('volume-value');
+
+  // Load saved volume from localStorage
+  const savedVolume = localStorage.getItem('volume');
+  if (savedVolume !== null) {
+    const volume = parseInt(savedVolume, 10);
+    volumeSlider.value = volume;
+    volumeValue.textContent = `${volume}%`;
+    videoPlayer.volume = volume / 100;
+  }
+
+  volumeSlider?.addEventListener('input', (e) => {
+    const volume = parseInt(e.target.value, 10);
+    volumeValue.textContent = `${volume}%`;
+    videoPlayer.volume = volume / 100;
+    localStorage.setItem('volume', volume);
+    wsConnection.setVolume(volume);
+  });
+}
+
+function setupPitchControl() {
+  const pitchUpBtn = document.getElementById('pitch-up');
+  const pitchDownBtn = document.getElementById('pitch-down');
+  const pitchValue = document.getElementById('pitch-value');
+  let currentPitch = 0;
+
+  const updatePitch = (pitch) => {
+    currentPitch = pitch;
+    pitchValue.textContent = pitch > 0 ? `+${pitch}` : `${pitch}`;
+    pitchUpBtn.disabled = pitch >= 3;
+    pitchDownBtn.disabled = pitch <= -3;
+
+    // Apply pitch using playbackRate
+    videoPlayer.preservesPitch = false;
+    videoPlayer.playbackRate = Math.pow(2, pitch / 12);
+  };
+
+  pitchUpBtn?.addEventListener('click', () => {
+    if (currentPitch < 3) {
+      const newPitch = currentPitch + 1;
+      updatePitch(newPitch);
+      wsConnection.setPitch(newPitch);
+    }
+  });
+
+  pitchDownBtn?.addEventListener('click', () => {
+    if (currentPitch > -3) {
+      const newPitch = currentPitch - 1;
+      updatePitch(newPitch);
+      wsConnection.setPitch(newPitch);
+    }
+  });
+
+  // Store reference for state updates
+  window.updatePitchUI = updatePitch;
+}
+
 function setupHostControls() {
   const previousBtn = document.getElementById('host-previous');
   const playPauseBtn = document.getElementById('host-play-pause');
@@ -278,6 +340,22 @@ async function updateUI(state) {
   console.log('UpdateUI called with state:', state.currentSong?.title, 'isPlaying:', state.isPlaying);
   // Update queue
   updateQueue(state.queue);
+
+  // Update volume
+  if (state.volume !== undefined) {
+    const volumeSlider = document.getElementById('volume-slider');
+    const volumeValue = document.getElementById('volume-value');
+    if (volumeSlider && volumeValue) {
+      volumeSlider.value = state.volume;
+      volumeValue.textContent = `${state.volume}%`;
+      videoPlayer.volume = state.volume / 100;
+    }
+  }
+
+  // Update pitch
+  if (state.pitch !== undefined && window.updatePitchUI) {
+    window.updatePitchUI(state.pitch);
+  }
 
   // Update current song
   if (state.currentSong) {
@@ -454,4 +532,75 @@ function formatTime(seconds) {
 function updateTimeDisplay(currentTime, duration) {
   if (currentTimeEl) currentTimeEl.textContent = formatTime(currentTime);
   if (totalTimeEl) totalTimeEl.textContent = formatTime(duration);
+}
+
+function setupKeyboardShortcuts() {
+  document.addEventListener('keydown', (e) => {
+    // Don't trigger shortcuts if user is typing in an input field
+    if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') {
+      return;
+    }
+
+    // Space: Play/Pause
+    if (e.code === 'Space') {
+      e.preventDefault();
+      if (videoPlayer.paused) {
+        videoPlayer.play();
+      } else {
+        videoPlayer.pause();
+      }
+      return;
+    }
+
+    // N: Skip to next song
+    if (e.code === 'KeyN' && !e.ctrlKey && !e.metaKey) {
+      e.preventDefault();
+      wsConnection.skipSong();
+      return;
+    }
+
+    // Up Arrow: Volume up
+    if (e.code === 'ArrowUp') {
+      e.preventDefault();
+      const volumeSlider = document.getElementById('volume-slider');
+      if (volumeSlider) {
+        const newVolume = Math.min(100, parseInt(volumeSlider.value) + 5);
+        volumeSlider.value = newVolume;
+        volumeSlider.dispatchEvent(new Event('input'));
+      }
+      return;
+    }
+
+    // Down Arrow: Volume down
+    if (e.code === 'ArrowDown') {
+      e.preventDefault();
+      const volumeSlider = document.getElementById('volume-slider');
+      if (volumeSlider) {
+        const newVolume = Math.max(0, parseInt(volumeSlider.value) - 5);
+        volumeSlider.value = newVolume;
+        volumeSlider.dispatchEvent(new Event('input'));
+      }
+      return;
+    }
+
+    // Right Arrow: Pitch up
+    if (e.code === 'ArrowRight') {
+      e.preventDefault();
+      const pitchUpBtn = document.getElementById('pitch-up');
+      if (pitchUpBtn && !pitchUpBtn.disabled) {
+        pitchUpBtn.click();
+      }
+      return;
+    }
+
+    // Left Arrow: Pitch down
+    if (e.code === 'ArrowLeft') {
+      e.preventDefault();
+      const pitchDownBtn = document.getElementById('pitch-down');
+      if (pitchDownBtn && !pitchDownBtn.disabled) {
+        pitchDownBtn.click();
+      }
+      return;
+    }
+  });
 }

@@ -32,6 +32,8 @@ class SessionState {
         this.clients = new Map();
         this.history = saved.history || [];
         this.nextId = saved.nextId || 1;
+        this.volume = saved.volume !== undefined ? saved.volume : 100;
+        this.pitch = saved.pitch || 0;
 
         console.log('✓ Restored previous session state');
       } else {
@@ -50,7 +52,9 @@ class SessionState {
         currentSong: this.currentSong,
         currentTime: this.currentTime,
         history: this.history.slice(-50), // Keep last 50 history items
-        nextId: this.nextId
+        nextId: this.nextId,
+        volume: this.volume,
+        pitch: this.pitch
       };
 
       fs.writeFileSync(this.stateFile, JSON.stringify(stateToSave, null, 2));
@@ -67,6 +71,8 @@ class SessionState {
     this.clients = new Map();
     this.history = [];
     this.nextId = 1;
+    this.volume = 100;
+    this.pitch = 0;
   }
 
   resetQueue() {
@@ -132,12 +138,14 @@ class SessionState {
       this.currentSong = this.queue.shift();
       this.currentTime = 0;
       this.isPlaying = true;
+      this.pitch = 0; // Reset pitch when song changes
       this.saveState();
       return this.currentSong;
     } else {
       this.currentSong = null;
       this.currentTime = 0;
       this.isPlaying = false;
+      this.pitch = 0;
       this.saveState();
       return null;
     }
@@ -201,6 +209,16 @@ class SessionState {
     }
   }
 
+  setVolume(volume) {
+    this.volume = Math.max(0, Math.min(100, volume));
+    this.saveState();
+  }
+
+  setPitch(pitch) {
+    this.pitch = Math.max(-3, Math.min(3, pitch));
+    this.saveState();
+  }
+
   getState() {
     return {
       queue: this.queue,
@@ -208,7 +226,9 @@ class SessionState {
       currentTime: this.currentTime,
       isPlaying: this.isPlaying,
       clients: Array.from(this.clients.values()),
-      history: this.history.slice(-10) // Last 10 played songs
+      history: this.history.slice(-10), // Last 10 played songs
+      volume: this.volume,
+      pitch: this.pitch
     };
   }
 }
