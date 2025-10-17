@@ -2,11 +2,15 @@
 const searchInput = document.getElementById('search-input');
 const searchBtn = document.getElementById('search-btn');
 const searchResults = document.getElementById('search-results');
+const karaokeCheckbox = document.getElementById('karaoke-checkbox');
 const queueListEl = document.getElementById('queue-list');
 const historyList = document.getElementById('history-list');
 const currentSongEl = document.getElementById('current-song');
 const connectionStatus = document.getElementById('connection-status');
 const userNameInput = document.getElementById('user-name');
+
+// Search state
+let isSearching = false;
 
 // Tab handling
 const tabs = document.querySelectorAll('.tab');
@@ -76,10 +80,18 @@ searchInput.addEventListener('keypress', (e) => {
 
 function performSearch() {
   const query = searchInput.value.trim();
-  if (!query) return;
+  if (!query || isSearching) return;
 
-  searchResults.innerHTML = '<div class="empty-state"><p>Searching...</p></div>';
-  wsConnection.search(query + ' karaoke');
+  // Set searching state
+  isSearching = true;
+  searchBtn.disabled = true;
+
+  // Show spinner
+  searchResults.innerHTML = '<div class="empty-state"><p><i class="fas fa-spinner fa-spin"></i> Searching...</p></div>';
+
+  // Add "karaoke" to query if checkbox is checked
+  const searchQuery = karaokeCheckbox.checked ? query + ' karaoke' : query;
+  wsConnection.search(searchQuery);
 }
 
 // Name handling
@@ -90,6 +102,16 @@ userNameInput.addEventListener('input', () => {
   const name = userNameInput.value.trim();
   localStorage.setItem('userName', name);
   wsConnection.updateName(name);
+});
+
+// Karaoke checkbox handling
+const savedKaraokePreference = localStorage.getItem('karaokeCheckbox');
+if (savedKaraokePreference !== null) {
+  karaokeCheckbox.checked = savedKaraokePreference === 'true';
+}
+
+karaokeCheckbox.addEventListener('change', () => {
+  localStorage.setItem('karaokeCheckbox', karaokeCheckbox.checked);
 });
 
 // WebSocket setup
@@ -184,6 +206,10 @@ function updateUI(state) {
 }
 
 function displaySearchResults(results) {
+  // Reset searching state
+  isSearching = false;
+  searchBtn.disabled = false;
+
   if (results.length === 0) {
     searchResults.innerHTML = '<div class="empty-state"><p>No results found</p></div>';
     return;
