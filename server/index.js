@@ -23,6 +23,9 @@ let tunnelPassword = null;
 app.use(express.static(path.join(__dirname, '..', 'public')));
 app.use(express.json());
 
+// Serve node_modules for Tone.js
+app.use('/node_modules', express.static(path.join(__dirname, '..', 'node_modules')));
+
 // Serve main karaoke view
 app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, '..', 'public', 'index.html'));

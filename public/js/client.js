@@ -78,7 +78,7 @@ const pitchDownBtn = document.getElementById('pitch-down-remote');
 let currentPitch = 0;
 
 pitchUpBtn?.addEventListener('click', () => {
-  if (currentPitch < 3) {
+  if (currentPitch < 12) {
     const newPitch = currentPitch + 1;
     currentPitch = newPitch;
     wsConnection.setPitch(newPitch);
@@ -86,7 +86,7 @@ pitchUpBtn?.addEventListener('click', () => {
 });
 
 pitchDownBtn?.addEventListener('click', () => {
-  if (currentPitch > -3) {
+  if (currentPitch > -12) {
     const newPitch = currentPitch - 1;
     currentPitch = newPitch;
     wsConnection.setPitch(newPitch);
@@ -189,10 +189,22 @@ function updateUI(state) {
     const pitchUpBtn = document.getElementById('pitch-up-remote');
     const pitchDownBtn = document.getElementById('pitch-down-remote');
     if (pitchValueEl) {
-      pitchValueEl.textContent = state.pitch > 0 ? `+${state.pitch}` : `${state.pitch}`;
+      // Display in tones (1 tone = 2 semitones)
+      const tones = state.pitch / 2;
+      const displayValue = tones > 0 ? `+${tones}` : `${tones}`;
+      pitchValueEl.textContent = displayValue;
+
+      // Color coding: red for negative, white for 0, default for positive
+      if (state.pitch < 0) {
+        pitchValueEl.style.color = '#ff4444';
+      } else if (state.pitch === 0) {
+        pitchValueEl.style.color = '#ffffff';
+      } else {
+        pitchValueEl.style.color = ''; // Use default color for positive
+      }
     }
-    if (pitchUpBtn) pitchUpBtn.disabled = state.pitch >= 3;
-    if (pitchDownBtn) pitchDownBtn.disabled = state.pitch <= -3;
+    if (pitchUpBtn) pitchUpBtn.disabled = state.pitch >= 12;
+    if (pitchDownBtn) pitchDownBtn.disabled = state.pitch <= -12;
   }
 
   // Update current song

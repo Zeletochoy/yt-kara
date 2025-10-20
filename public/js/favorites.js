@@ -126,18 +126,3 @@ function isFavorite(videoId) {
   return favorites.some(fav => fav.videoId === id);
 }
 
-/**
- * Toggle favorite status
- * @param {string} videoId - YouTube video ID or URL
- * @param {Object} metadata - Song metadata (only used if adding)
- * @returns {boolean} - New favorite status (true = is now favorite)
- */
-function _toggleFavorite(videoId, metadata) {
-  if (isFavorite(videoId)) {
-    removeFavorite(videoId);
-    return false;
-  } else {
-    addFavorite(videoId, metadata);
-    return true;
-  }
-}

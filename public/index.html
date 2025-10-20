@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>YT-Kara - Karaoke Player</title>
   <link rel="icon" type="image/svg+xml" href="/favicon.svg">
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <link rel="stylesheet" href="/node_modules/@fortawesome/fontawesome-free/css/all.min.css">
   <link rel="stylesheet" href="/css/karaoke.css">
 </head>
 <body>
@@ -76,14 +76,15 @@
         <span id="volume-value">100%</span>
       </div>
       <div id="pitch-control">
-        <button id="pitch-down" class="pitch-btn" title="Lower pitch by 1 semitone"><i class="fas fa-minus"></i></button>
+        <button id="pitch-down" class="pitch-btn" title="Lower pitch (♭)">♭</button>
         <span id="pitch-value">+0</span>
-        <button id="pitch-up" class="pitch-btn" title="Raise pitch by 1 semitone"><i class="fas fa-plus"></i></button>
+        <button id="pitch-up" class="pitch-btn" title="Raise pitch (♯)">♯</button>
       </div>
     </div>
   </div>
 
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+  <script src="/node_modules/qrcodejs2/qrcode.min.js"></script>
+  <script src="/node_modules/tone/build/Tone.js"></script>
   <script src="/js/mse-player.js"></script>
   <script src="/js/websocket.js"></script>
   <script src="/js/karaoke.js"></script>

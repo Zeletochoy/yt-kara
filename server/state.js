@@ -33,7 +33,7 @@ class SessionState {
         this.history = saved.history || [];
         this.nextId = saved.nextId || 1;
         this.volume = saved.volume !== undefined ? saved.volume : 100;
-        this.pitch = saved.pitch || 0;
+        this.pitch = 0;
 
         console.log('✓ Restored previous session state');
       } else {
@@ -53,8 +53,7 @@ class SessionState {
         currentTime: this.currentTime,
         history: this.history.slice(-50), // Keep last 50 history items
         nextId: this.nextId,
-        volume: this.volume,
-        pitch: this.pitch
+        volume: this.volume
       };
 
       fs.writeFileSync(this.stateFile, JSON.stringify(stateToSave, null, 2));
@@ -215,8 +214,8 @@ class SessionState {
   }
 
   setPitch(pitch) {
-    this.pitch = Math.max(-3, Math.min(3, pitch));
-    this.saveState();
+    // Allow wider range for pitch shifting (±12 semitones = 1 octave)
+    this.pitch = Math.max(-12, Math.min(12, pitch));
   }
 
   getState() {

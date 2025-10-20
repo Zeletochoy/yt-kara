@@ -11,6 +11,11 @@ const totalTimeEl = document.getElementById('total-time');
 let currentVideoUrl = null;
 let playbackUpdateInterval = null;
 
+// Tone.js audio context for pitch shifting
+let toneInitialized = false;
+let pitchShifter = null;
+let mediaElementSource = null;
+
 // Initialize
 document.addEventListener('DOMContentLoaded', () => {
   setupConnection();
@@ -238,6 +243,48 @@ function setupVolumeControl() {
   });
 }
 
+async function initializeToneAudio() {
+  if (toneInitialized) return;
+
+  console.log('[Tone.js] Starting initialization...');
+  console.log('[Tone.js] Version:', Tone.version);
+
+  // Start Tone.js audio context
+  await Tone.start();
+  console.log('[Tone.js] Audio context state:', Tone.context.state);
+
+  // Create MediaElementSource from video player
+  // This will route ALL audio from the video through Tone.js
+  mediaElementSource = Tone.context.createMediaElementSource(videoPlayer);
+  console.log('[Tone.js] MediaElementSource created');
+
+  // IMPORTANT: Once we create a MediaElementSource, the video element
+  // no longer outputs audio directly - it only goes through Web Audio API
+
+  // Create PitchShift effect (pitch = 0 means no shift)
+  pitchShifter = new Tone.PitchShift(0).toDestination();
+
+  // Ensure no feedback/reverb from the pitch shifter
+  pitchShifter.wet.value = 1; // 100% wet signal (only pitch-shifted audio)
+  pitchShifter.feedback.value = 0; // No feedback to prevent echo/reverb
+
+  console.log('[Tone.js] PitchShift created');
+  console.log('[Tone.js] Initial pitch value:', pitchShifter.pitch);
+
+  // Connect native node to Tone node - Tone.js handles the routing
+  Tone.connect(mediaElementSource, pitchShifter);
+  console.log('[Tone.js] Audio nodes connected');
+
+  toneInitialized = true;
+
+  // Expose for testing
+  window.__test__ = {
+    toneInitialized,
+    pitchShifter,
+    mediaElementSource
+  };
+}
+
 function setupPitchControl() {
   const pitchUpBtn = document.getElementById('pitch-up');
   const pitchDownBtn = document.getElementById('pitch-down');
@@ -246,17 +293,43 @@ function setupPitchControl() {
 
   const updatePitch = (pitch) => {
     currentPitch = pitch;
-    pitchValue.textContent = pitch > 0 ? `+${pitch}` : `${pitch}`;
-    pitchUpBtn.disabled = pitch >= 3;
-    pitchDownBtn.disabled = pitch <= -3;
 
-    // Apply pitch using playbackRate
-    videoPlayer.preservesPitch = false;
-    videoPlayer.playbackRate = Math.pow(2, pitch / 12);
+    // Display in tones (1 tone = 2 semitones)
+    const tones = pitch / 2;
+    const displayValue = tones > 0 ? `+${tones}` : `${tones}`;
+    pitchValue.textContent = displayValue;
+
+    // Color coding: red for negative, white for 0, default for positive
+    if (pitch < 0) {
+      pitchValue.style.color = '#ff4444';
+    } else if (pitch === 0) {
+      pitchValue.style.color = '#ffffff';
+    } else {
+      pitchValue.style.color = ''; // Use default color for positive
+    }
+
+    pitchUpBtn.disabled = pitch >= 12;
+    pitchDownBtn.disabled = pitch <= -12;
+
+    // Update pitch shifter if initialized
+    if (toneInitialized && pitchShifter) {
+      console.log('[Pitch] Setting pitch to:', pitch);
+      console.log('[Pitch] Before - pitchShifter.pitch:', pitchShifter.pitch);
+
+      // In Tone.js v15, pitch is a direct number property
+      pitchShifter.pitch = pitch;
+
+      console.log('[Pitch] After - pitchShifter.pitch:', pitchShifter.pitch);
+
+      // Update test reference
+      if (window.__test__) {
+        window.__test__.pitchShifter = pitchShifter;
+      }
+    }
   };
 
   pitchUpBtn?.addEventListener('click', () => {
-    if (currentPitch < 3) {
+    if (currentPitch < 12) {
       const newPitch = currentPitch + 1;
       updatePitch(newPitch);
       wsConnection.setPitch(newPitch);
@@ -264,7 +337,7 @@ function setupPitchControl() {
   });
 
   pitchDownBtn?.addEventListener('click', () => {
-    if (currentPitch > -3) {
+    if (currentPitch > -12) {
       const newPitch = currentPitch - 1;
       updatePitch(newPitch);
       wsConnection.setPitch(newPitch);
@@ -409,6 +482,11 @@ async function loadVideo(song, isPlaying = true) {
   videoPlayer.pause();
   videoPlayer.removeAttribute('src');
   videoPlayer.load(); // Reset the video element
+
+  // Initialize Tone.js audio routing on first video load
+  if (!toneInitialized) {
+    await initializeToneAudio();
+  }
 
   try {
     const response = await fetch(`/api/video/${song.videoId}`);
@@ -603,4 +681,13 @@ function setupKeyboardShortcuts() {
       return;
     }
   });
+}
+
+// Expose for testing
+if (typeof window !== 'undefined') {
+  window.__test__ = {
+    get toneInitialized() { return toneInitialized; },
+    get pitchShifter() { return pitchShifter; },
+    get mediaElementSource() { return mediaElementSource; }
+  };
 }
