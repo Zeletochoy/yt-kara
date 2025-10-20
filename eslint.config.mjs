@@ -24,6 +24,7 @@ export default [
         AbortController: 'readonly',
         Uint8Array: 'readonly',
         QRCode: 'readonly',
+        Tone: 'readonly',
         wsConnection: 'readonly',
         MSEPlayer: 'readonly',
         confirm: 'readonly',
