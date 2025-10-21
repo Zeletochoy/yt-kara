@@ -63,23 +63,73 @@
         </div>
       </div>
       <div id="host-controls">
-        <button id="host-previous" class="control-btn" title="Go back to previous song"><i class="fas fa-step-backward"></i></button>
-        <button id="host-seek-back" class="control-btn" title="Rewind 10 seconds"><i class="fas fa-undo"></i></button>
-        <button id="host-play-pause" class="control-btn" title="Play or pause current song"><i class="fas fa-pause"></i></button>
-        <button id="host-seek-forward" class="control-btn" title="Forward 10 seconds"><i class="fas fa-redo"></i></button>
-        <button id="host-skip" class="control-btn" title="Skip to next song in queue"><i class="fas fa-step-forward"></i></button>
+        <button id="host-previous" class="control-btn" title="Go back to previous song [P]"><i class="fas fa-step-backward"></i></button>
+        <button id="host-seek-back" class="control-btn" title="Rewind 10 seconds [←]"><i class="fas fa-undo"></i></button>
+        <button id="host-play-pause" class="control-btn" title="Play or pause current song [Space]"><i class="fas fa-pause"></i></button>
+        <button id="host-seek-forward" class="control-btn" title="Forward 10 seconds [→]"><i class="fas fa-redo"></i></button>
+        <button id="host-skip" class="control-btn" title="Skip to next song in queue [N]"><i class="fas fa-step-forward"></i></button>
         <button id="host-fullscreen" class="control-btn" title="Toggle fullscreen mode"><i class="fas fa-expand"></i></button>
       </div>
       <div id="volume-control">
         <i class="fas fa-volume-up"></i>
-        <input type="range" id="volume-slider" min="0" max="100" value="100" title="Adjust volume (0-100%)">
+        <input type="range" id="volume-slider" min="0" max="100" value="100" title="Adjust volume (0-100%) [↑/↓]">
         <span id="volume-value">100%</span>
       </div>
       <div id="pitch-control">
-        <button id="pitch-down" class="pitch-btn" title="Lower pitch (♭)">♭</button>
+        <button id="pitch-down" class="pitch-btn" title="Lower pitch (♭) [-]">♭</button>
         <span id="pitch-value">+0</span>
-        <button id="pitch-up" class="pitch-btn" title="Raise pitch (♯)">♯</button>
+        <button id="pitch-up" class="pitch-btn" title="Raise pitch (♯) [=]">♯</button>
       </div>
+    </div>
+  </div>
+
+  <!-- Keyboard Shortcuts Help Overlay -->
+  <div id="shortcuts-help" class="shortcuts-overlay" style="display: none;">
+    <div class="shortcuts-content">
+      <h2>Keyboard Shortcuts</h2>
+      <div class="shortcuts-list">
+        <div class="shortcut-item">
+          <kbd>Space</kbd>
+          <span>Play / Pause</span>
+        </div>
+        <div class="shortcut-item">
+          <kbd>N</kbd>
+          <span>Skip to next song</span>
+        </div>
+        <div class="shortcut-item">
+          <kbd>P</kbd>
+          <span>Previous song</span>
+        </div>
+        <div class="shortcut-item">
+          <kbd>←</kbd>
+          <span>Seek back 10 seconds</span>
+        </div>
+        <div class="shortcut-item">
+          <kbd>→</kbd>
+          <span>Seek forward 10 seconds</span>
+        </div>
+        <div class="shortcut-item">
+          <kbd>↑</kbd>
+          <span>Volume up (+5%)</span>
+        </div>
+        <div class="shortcut-item">
+          <kbd>↓</kbd>
+          <span>Volume down (-5%)</span>
+        </div>
+        <div class="shortcut-item">
+          <kbd>-</kbd>
+          <span>Pitch down (-1 semitone)</span>
+        </div>
+        <div class="shortcut-item">
+          <kbd>=</kbd>
+          <span>Pitch up (+1 semitone)</span>
+        </div>
+        <div class="shortcut-item">
+          <kbd>?</kbd>
+          <span>Show this help</span>
+        </div>
+      </div>
+      <button id="close-shortcuts-help" class="close-shortcuts-btn">Close</button>
     </div>
   </div>
 

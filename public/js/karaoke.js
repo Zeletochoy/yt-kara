@@ -25,6 +25,7 @@ document.addEventListener('DOMContentLoaded', () => {
   setupVolumeControl();
   setupPitchControl();
   setupKeyboardShortcuts();
+  setupShortcutsHelp();
 
   // Fullscreen button
   document.getElementById('host-fullscreen')?.addEventListener('click', () => {
@@ -637,6 +638,13 @@ function setupKeyboardShortcuts() {
       return;
     }
 
+    // P: Previous song
+    if (e.code === 'KeyP' && !e.ctrlKey && !e.metaKey) {
+      e.preventDefault();
+      wsConnection.previousSong();
+      return;
+    }
+
     // Up Arrow: Volume up
     if (e.code === 'ArrowUp') {
       e.preventDefault();
@@ -661,8 +669,36 @@ function setupKeyboardShortcuts() {
       return;
     }
 
-    // Right Arrow: Pitch up
+    // Left Arrow: Seek back 10 seconds
+    if (e.code === 'ArrowLeft') {
+      e.preventDefault();
+      const newTime = Math.max(0, videoPlayer.currentTime - 10);
+      videoPlayer.currentTime = newTime;
+      wsConnection.seek(newTime);
+      return;
+    }
+
+    // Right Arrow: Seek forward 10 seconds
     if (e.code === 'ArrowRight') {
+      e.preventDefault();
+      const newTime = Math.min(videoPlayer.duration || 0, videoPlayer.currentTime + 10);
+      videoPlayer.currentTime = newTime;
+      wsConnection.seek(newTime);
+      return;
+    }
+
+    // - (Minus): Pitch down
+    if (e.code === 'Minus' && !e.ctrlKey && !e.metaKey) {
+      e.preventDefault();
+      const pitchDownBtn = document.getElementById('pitch-down');
+      if (pitchDownBtn && !pitchDownBtn.disabled) {
+        pitchDownBtn.click();
+      }
+      return;
+    }
+
+    // = (Equal/Plus): Pitch up
+    if (e.code === 'Equal' && !e.ctrlKey && !e.metaKey) {
       e.preventDefault();
       const pitchUpBtn = document.getElementById('pitch-up');
       if (pitchUpBtn && !pitchUpBtn.disabled) {
@@ -671,16 +707,39 @@ function setupKeyboardShortcuts() {
       return;
     }
 
-    // Left Arrow: Pitch down
-    if (e.code === 'ArrowLeft') {
+    // ?: Show keyboard shortcuts help
+    if (e.code === 'Slash' && e.shiftKey) {
       e.preventDefault();
-      const pitchDownBtn = document.getElementById('pitch-down');
-      if (pitchDownBtn && !pitchDownBtn.disabled) {
-        pitchDownBtn.click();
-      }
+      showShortcutsHelp();
       return;
     }
   });
+}
+
+function setupShortcutsHelp() {
+  const helpOverlay = document.getElementById('shortcuts-help');
+  const closeBtn = document.getElementById('close-shortcuts-help');
+
+  if (closeBtn) {
+    closeBtn.addEventListener('click', () => {
+      helpOverlay.style.display = 'none';
+    });
+  }
+
+  if (helpOverlay) {
+    helpOverlay.addEventListener('click', (e) => {
+      if (e.target === helpOverlay) {
+        helpOverlay.style.display = 'none';
+      }
+    });
+  }
+}
+
+function showShortcutsHelp() {
+  const helpOverlay = document.getElementById('shortcuts-help');
+  if (helpOverlay) {
+    helpOverlay.style.display = 'flex';
+  }
 }
 
 // Expose for testing

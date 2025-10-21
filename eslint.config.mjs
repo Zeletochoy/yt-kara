@@ -31,6 +31,13 @@ export default [
         CustomEvent: 'readonly',
         Event: 'readonly',
 
+        // Favorites module (loaded via script tag in client.html)
+        addFavorite: 'readonly',
+        removeFavorite: 'readonly',
+        getFavorites: 'readonly',
+        isFavorite: 'readonly',
+        displayFavorites: 'readonly',
+
         // Node globals
         process: 'readonly',
         Buffer: 'readonly',

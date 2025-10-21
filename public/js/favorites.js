@@ -39,7 +39,7 @@ function extractVideoId(url) {
  * @param {Object} metadata - Song metadata {title, artist, thumbnail}
  * @returns {boolean} - True if added successfully
  */
-function addFavorite(videoId, metadata) {
+function addFavorite(videoId, metadata) { // eslint-disable-line no-unused-vars
   const id = extractVideoId(videoId);
   if (!id) {
     console.error('Invalid video ID or URL:', videoId);
@@ -76,7 +76,7 @@ function addFavorite(videoId, metadata) {
  * @param {string} videoId - YouTube video ID or URL
  * @returns {boolean} - True if removed successfully
  */
-function removeFavorite(videoId) {
+function removeFavorite(videoId) { // eslint-disable-line no-unused-vars
   const id = extractVideoId(videoId);
   if (!id) {
     console.error('Invalid video ID or URL:', videoId);
@@ -118,7 +118,7 @@ function getFavorites() {
  * @param {string} videoId - YouTube video ID or URL
  * @returns {boolean} - True if in favorites
  */
-function isFavorite(videoId) {
+function isFavorite(videoId) { // eslint-disable-line no-unused-vars
   const id = extractVideoId(videoId);
   if (!id) return false;
 

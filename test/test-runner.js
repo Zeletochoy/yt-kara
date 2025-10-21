@@ -37,7 +37,7 @@ class TestRunner {
   }
 
   async startServer() {
-    console.log(`${colors.cyan}Starting server...${colors.reset}`);
+    console.log(`${colors.cyan}Starting server in TEST_MODE...${colors.reset}`);
 
     // Kill any existing servers first
     await this.killExistingServers();
@@ -45,6 +45,7 @@ class TestRunner {
     return new Promise((resolve, reject) => {
       this.server = spawn('npm', ['start'], {
         cwd: path.join(__dirname, '..'),
+        env: { ...process.env, TEST_MODE: 'true' },
         stdio: 'pipe'
       });
 
