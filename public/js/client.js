@@ -147,7 +147,6 @@ karaokeCheckbox.addEventListener('change', () => {
 
 // WebSocket setup
 wsConnection.onConnect = () => {
-  connectionStatus.classList.remove('disconnected');
   // Send name on connect
   const name = localStorage.getItem('userName') || '';
   if (name) {
@@ -156,8 +155,22 @@ wsConnection.onConnect = () => {
 };
 
 wsConnection.onDisconnect = () => {
-  connectionStatus.classList.add('disconnected');
+  // Status is now handled by onStatusChange
 };
+
+// Handle connection status changes
+wsConnection.onStatusChange((status) => {
+  // Remove all status classes
+  connectionStatus.classList.remove('disconnected', 'reconnecting');
+
+  // Add appropriate class based on status
+  if (status === 'disconnected') {
+    connectionStatus.classList.add('disconnected');
+  } else if (status === 'reconnecting') {
+    connectionStatus.classList.add('reconnecting');
+  }
+  // 'connected' has no class (default green)
+});
 
 wsConnection.on('STATE_UPDATE', (message) => {
   updateUI(message.state);

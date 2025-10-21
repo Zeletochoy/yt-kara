@@ -8,6 +8,95 @@ class YouTubeService {
     this.init();
   }
 
+  /**
+   * Retry a function with exponential backoff
+   * @param {Function} fn - Async function to retry
+   * @param {number} maxRetries - Maximum number of retry attempts (default: 3)
+   * @param {string} operation - Operation name for logging
+   * @returns {Promise<any>} Result of the function
+   */
+  async retryWithBackoff(fn, maxRetries = 3, operation = 'operation') {
+    let lastError;
+
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        return await fn();
+      } catch (error) {
+        lastError = error;
+
+        // Don't retry on certain error types
+        if (this.isNonRetryableError(error)) {
+          console.log(`[YouTube] ${operation} failed with non-retryable error:`, error.message);
+          throw error;
+        }
+
+        if (attempt < maxRetries) {
+          const delay = Math.min(1000 * Math.pow(2, attempt - 1), 10000); // Max 10s
+          console.log(`[YouTube] ${operation} failed (attempt ${attempt}/${maxRetries}), retrying in ${delay}ms...`);
+          console.log(`  Error: ${error.message}`);
+          await new Promise(resolve => setTimeout(resolve, delay));
+        } else {
+          console.error(`[YouTube] ${operation} failed after ${maxRetries} attempts:`, error.message);
+        }
+      }
+    }
+
+    throw lastError;
+  }
+
+  /**
+   * Check if an error should not be retried
+   * @param {Error} error - The error to check
+   * @returns {boolean} True if error should not be retried
+   */
+  isNonRetryableError(error) {
+    const message = error.message?.toLowerCase() || '';
+
+    // Don't retry these error types
+    const nonRetryablePatterns = [
+      'video unavailable',
+      'private video',
+      'deleted',
+      'removed',
+      'blocked',
+      'copyright',
+      'age-restricted',
+      'not found'
+    ];
+
+    return nonRetryablePatterns.some(pattern => message.includes(pattern));
+  }
+
+  /**
+   * Categorize error type for better user messaging
+   * @param {Error} error - The error to categorize
+   * @returns {string} Error category
+   */
+  categorizeError(error) {
+    const message = error.message?.toLowerCase() || '';
+
+    if (message.includes('unavailable') || message.includes('not found')) {
+      return 'VIDEO_UNAVAILABLE';
+    }
+    if (message.includes('private')) {
+      return 'VIDEO_PRIVATE';
+    }
+    if (message.includes('deleted') || message.includes('removed')) {
+      return 'VIDEO_DELETED';
+    }
+    if (message.includes('blocked') || message.includes('copyright')) {
+      return 'VIDEO_BLOCKED';
+    }
+    if (message.includes('rate limit') || message.includes('quota')) {
+      return 'RATE_LIMITED';
+    }
+    if (message.includes('network') || message.includes('timeout')) {
+      return 'NETWORK_ERROR';
+    }
+
+    return 'UNKNOWN_ERROR';
+  }
+
   async init() {
     try {
       this.youtube = await Innertube.create();
@@ -36,7 +125,12 @@ class YouTubeService {
     }
 
     try {
-      const info = await this.youtube.getBasicInfo(videoId);
+      // Use retry logic for fetching video info
+      const info = await this.retryWithBackoff(
+        () => this.youtube.getBasicInfo(videoId),
+        3,
+        `getVideoUrl(${videoId})`
+      );
 
       // Try different approaches to get the stream URL
       let url = null;
@@ -115,15 +209,21 @@ class YouTubeService {
 
       return videoInfo;
     } catch (error) {
-      console.error(`Failed to get video URL for ${videoId}:`, error.message);
+      const errorCategory = this.categorizeError(error);
+      console.error(`[YouTube] Failed to get video URL for ${videoId}:`, {
+        error: error.message,
+        category: errorCategory,
+        videoId
+      });
 
       // Clear from cache if it exists
       this.urlCache.delete(videoId);
 
-      // Return a fallback error response instead of throwing
+      // Return a structured error response with category
       return {
         error: true,
         message: error.message,
+        category: errorCategory,
         videoId: videoId
       };
     }
@@ -139,7 +239,12 @@ class YouTubeService {
     }
 
     try {
-      const searchResults = await this.youtube.search(query);
+      // Use retry logic for search
+      const searchResults = await this.retryWithBackoff(
+        () => this.youtube.search(query),
+        3,
+        `search("${query}")`
+      );
 
       // Filter to only videos and extract relevant info
       const videos = searchResults.results
@@ -168,8 +273,16 @@ class YouTubeService {
 
       return videos;
     } catch (error) {
-      console.error(`Search failed for "${query}":`, error);
-      throw error;
+      const errorCategory = this.categorizeError(error);
+      console.error(`[YouTube] Search failed for "${query}":`, {
+        error: error.message,
+        category: errorCategory,
+        query
+      });
+
+      // Return empty results instead of throwing
+      // This prevents search errors from crashing the client
+      return [];
     }
   }
 }

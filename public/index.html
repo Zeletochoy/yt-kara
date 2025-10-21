@@ -24,6 +24,13 @@
         <div class="loading-spinner"></div>
         <p class="loading-text">Loading video...</p>
       </div>
+      <!-- Error Overlay -->
+      <div id="error-overlay" style="display: none;">
+        <div class="error-icon"><i class="fas fa-exclamation-triangle fa-3x"></i></div>
+        <p class="error-message" id="error-message">Video failed to load</p>
+        <button id="skip-error-btn" class="error-btn">Skip This Song</button>
+        <p class="error-auto-skip" id="error-auto-skip">Auto-skipping in <span id="error-countdown">15</span>s...</p>
+      </div>
     </div>
 
     <!-- Queue Sidebar -->

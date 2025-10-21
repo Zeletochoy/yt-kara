@@ -32,9 +32,19 @@ class CacheManager {
       const metadata = JSON.parse(fs.readFileSync(metadataPath, 'utf8'));
       const videoPath = path.join(videoDir, metadata.videoFile);
 
-      return fs.existsSync(videoPath);
+      const exists = fs.existsSync(videoPath);
+
+      // If metadata exists but video file doesn't, clean up corrupted cache
+      if (!exists) {
+        console.warn(`[Cache] Corrupted cache detected for ${videoId}, cleaning up`);
+        this.deleteVideo(videoId);
+      }
+
+      return exists;
     } catch (error) {
-      console.error(`Error checking cache for ${videoId}:`, error);
+      console.error(`[Cache] Error checking cache for ${videoId}:`, error.message);
+      // Clean up corrupted cache entry
+      this.deleteVideo(videoId);
       return false;
     }
   }
@@ -48,9 +58,21 @@ class CacheManager {
     }
 
     try {
-      return JSON.parse(fs.readFileSync(metadataPath, 'utf8'));
+      const data = fs.readFileSync(metadataPath, 'utf8');
+      const metadata = JSON.parse(data);
+
+      // Validate metadata structure
+      if (!metadata.videoFile || !metadata.duration) {
+        console.warn(`[Cache] Invalid metadata structure for ${videoId}, cleaning up`);
+        this.deleteVideo(videoId);
+        return null;
+      }
+
+      return metadata;
     } catch (error) {
-      console.error(`Error reading metadata for ${videoId}:`, error);
+      console.error(`[Cache] Error reading metadata for ${videoId}:`, error.message);
+      // Clean up corrupted metadata
+      this.deleteVideo(videoId);
       return null;
     }
   }
@@ -204,9 +226,37 @@ class CacheManager {
   deleteVideo(videoId) {
     const videoDir = path.join(this.cacheDir, videoId);
 
-    if (fs.existsSync(videoDir)) {
-      console.log(`[Cache] Deleting cached video: ${videoId}`);
-      fs.rmSync(videoDir, { recursive: true, force: true });
+    try {
+      if (fs.existsSync(videoDir)) {
+        console.log(`[Cache] Deleting cached video: ${videoId}`);
+        fs.rmSync(videoDir, { recursive: true, force: true });
+      }
+    } catch (error) {
+      console.error(`[Cache] Error deleting video ${videoId}:`, error.message);
+      // Try again with force flag
+      try {
+        if (fs.existsSync(videoDir)) {
+          fs.rmSync(videoDir, { recursive: true, force: true, maxRetries: 3 });
+        }
+      } catch (retryError) {
+        console.error(`[Cache] Failed to delete ${videoId} after retry:`, retryError.message);
+      }
+    }
+  }
+
+  // Invalidate cache for a failed video (alias for deleteVideo with better semantics)
+  invalidate(videoId) {
+    console.log(`[Cache] Invalidating cache for failed video: ${videoId}`);
+    this.deleteVideo(videoId);
+
+    // Also remove from download queue if present
+    this.downloadQueue = this.downloadQueue.filter(item => item.videoId !== videoId);
+
+    // Cancel active download if it's for this video
+    if (this.downloading === videoId) {
+      console.log(`[Cache] Cancelling in-progress download for: ${videoId}`);
+      this.downloading = null;
+      this.downloadPromises.delete(videoId);
     }
   }
 

@@ -6,6 +6,8 @@ class WSConnection {
     this.reconnectInterval = null;
     this.messageHandlers = new Map();
     this.state = null;
+    this.connectionStatus = 'disconnected'; // 'connected', 'disconnected', 'reconnecting'
+    this.statusChangeHandlers = [];
   }
 
   connect() {
@@ -18,6 +20,7 @@ class WSConnection {
     this.ws.onopen = () => {
       console.log('WebSocket connected');
       this.reconnectAttempts = 0;
+      this.setConnectionStatus('connected');
       if (this.onConnect) this.onConnect();
     };
 
@@ -32,6 +35,7 @@ class WSConnection {
 
     this.ws.onclose = () => {
       console.log('WebSocket disconnected');
+      this.setConnectionStatus('disconnected');
       if (this.onDisconnect) this.onDisconnect();
       this.attemptReconnect();
     };
@@ -42,16 +46,47 @@ class WSConnection {
   }
 
   attemptReconnect() {
-    if (this.reconnectAttempts >= 10) return;
+    if (this.reconnectAttempts >= 10) {
+      console.log('Max reconnection attempts reached');
+      return;
+    }
 
     this.reconnectAttempts++;
-    const delay = Math.min(1000 * Math.pow(2, this.reconnectAttempts), 30000);
+    // Start at 1s, double each time, max 30s
+    const delay = Math.min(1000 * Math.pow(2, this.reconnectAttempts - 1), 30000);
 
-    console.log(`Reconnecting in ${delay}ms (attempt ${this.reconnectAttempts})`);
+    console.log(`Reconnecting in ${delay}ms (attempt ${this.reconnectAttempts}/10)`);
+    this.setConnectionStatus('reconnecting');
 
     setTimeout(() => {
       this.connect();
     }, delay);
+  }
+
+  setConnectionStatus(status) {
+    if (this.connectionStatus !== status) {
+      this.connectionStatus = status;
+      console.log(`[WebSocket] Connection status: ${status}`);
+
+      // Notify all status change handlers
+      this.statusChangeHandlers.forEach(handler => {
+        try {
+          handler(status);
+        } catch (error) {
+          console.error('Error in status change handler:', error);
+        }
+      });
+    }
+  }
+
+  onStatusChange(handler) {
+    this.statusChangeHandlers.push(handler);
+    // Immediately call with current status
+    handler(this.connectionStatus);
+  }
+
+  getConnectionStatus() {
+    return this.connectionStatus;
   }
 
   handleMessage(message) {

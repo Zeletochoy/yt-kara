@@ -71,10 +71,25 @@ header h1 {
   height: 10px;
   border-radius: 50%;
   background: #4CAF50;
+  transition: background 0.3s ease;
 }
 
 #connection-status.disconnected {
   background: #f44336;
+}
+
+#connection-status.reconnecting {
+  background: #fbbf24;
+  animation: pulse 1s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
 }
 
 /* Tab Navigation */
