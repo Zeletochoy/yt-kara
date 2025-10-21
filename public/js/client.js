@@ -284,10 +284,12 @@ function displaySearchResults(results) {
   // Store results globally for access by addToQueue
   window.searchResultsCache = results;
 
-  searchResults.innerHTML = results.map((item, index) => `
-    <div class="song-card clickable" onclick="addToQueue(${index})" title="Click to add to queue">
+  searchResults.innerHTML = results.map((item, index) => {
+    const isFav = isFavorite(item.videoId);
+    return `
+    <div class="song-card">
       <img src="${item.thumbnail}" alt="" class="song-thumbnail">
-      <div class="song-info">
+      <div class="song-info clickable" onclick="addToQueue(${index})" title="Click to add to queue">
         <div class="song-title">${item.title}</div>
         <div class="song-meta">
           ${item.channel} • ${formatTime(item.duration)}
@@ -296,8 +298,43 @@ function displaySearchResults(results) {
           </a>
         </div>
       </div>
+      <button class="favorite-btn ${isFav ? 'active' : ''}" data-video-id="${item.videoId}" data-index="${index}" title="${isFav ? 'Remove from favorites' : 'Add to favorites'}">
+        <i class="fas fa-star"></i>
+      </button>
     </div>
-  `).join('');
+  `;
+  }).join('');
+
+  // Set up event delegation for favorite buttons
+  setupFavoriteButtons();
+}
+
+// Set up event delegation for favorite buttons
+function setupFavoriteButtons() {
+  const resultsContainer = document.getElementById('search-results');
+  if (!resultsContainer) return;
+
+  // Remove any existing listener to avoid duplicates
+  resultsContainer.removeEventListener('click', handleFavoriteClick);
+  resultsContainer.addEventListener('click', handleFavoriteClick);
+}
+
+// Handle favorite button clicks
+function handleFavoriteClick(e) {
+  const button = e.target.closest('.favorite-btn');
+  if (!button) return;
+
+  e.stopPropagation();
+  e.preventDefault();
+
+  const videoId = button.dataset.videoId;
+  if (!videoId) return;
+
+  // Add visual feedback animation
+  button.classList.add('pulse');
+  setTimeout(() => button.classList.remove('pulse'), 400);
+
+  toggleFavoriteById(videoId);
 }
 
 // Helper functions
@@ -485,7 +522,6 @@ document.addEventListener('touchend', (e) => {
 
   // Send reorder command if position changed
   if (draggedIndex !== null && newIndex !== -1 && newIndex !== draggedIndex) {
-    console.log('Reordering queue:', draggedIndex, '->', newIndex);
     wsConnection.reorderQueue(draggedIndex, newIndex);
   }
 
@@ -524,7 +560,133 @@ function addFromHistory(videoId, title, thumbnail, duration) {
   document.querySelector('[data-tab="queue"]').click();
 }
 
+// Favorites functions
+function toggleFavoriteById(videoId) {
+  // Find the song in search results to get metadata
+  const song = window.searchResultsCache ?
+    window.searchResultsCache.find(s => s.videoId === videoId) : null;
+
+  if (!song) {
+    console.error('Song not found in search results:', videoId);
+    return;
+  }
+
+  const metadata = {
+    title: song.title,
+    artist: song.channel,
+    thumbnail: song.thumbnail
+  };
+
+  const wasFavorite = isFavorite(videoId);
+
+  // Perform the toggle operation
+  if (wasFavorite) {
+    removeFavorite(videoId);
+  } else {
+    addFavorite(videoId, metadata);
+  }
+
+  // Check the NEW state after the update
+  const isNowFavorite = isFavorite(videoId);
+
+  // Update the button state based on the NEW state
+  const button = document.querySelector(`#search-results .favorite-btn[data-video-id="${videoId}"]`);
+
+  if (button) {
+    // Clear all state first
+    button.classList.remove('active');
+
+    // Set new state based on current favorite status
+    if (isNowFavorite) {
+      button.classList.add('active');
+      button.setAttribute('title', 'Remove from favorites');
+    } else {
+      button.setAttribute('title', 'Add to favorites');
+    }
+  }
+}
+
+// Legacy function for backwards compatibility (if needed)
+function toggleFavorite(index) {
+  if (window.searchResultsCache && window.searchResultsCache[index]) {
+    toggleFavoriteById(window.searchResultsCache[index].videoId);
+  }
+}
+
+function displayFavorites() {
+  const favoritesListEl = document.getElementById('favorites-list');
+  const favorites = getFavorites();
+
+  if (favorites.length === 0) {
+    favoritesListEl.innerHTML = '<div class="empty-state"><p>No favorites yet<br><small>Add songs to favorites from search results</small></p></div>';
+    return;
+  }
+
+  favoritesListEl.innerHTML = favorites.map(fav => `
+    <div class="song-card">
+      <img src="${fav.thumbnail}" alt="" class="song-thumbnail">
+      <div class="song-info">
+        <div class="song-title">${fav.title}</div>
+        <div class="song-meta">${fav.artist || 'Unknown Artist'}</div>
+      </div>
+      <button class="add-btn" onclick="addFavoriteToQueue('${fav.videoId}')" title="Add to queue">
+        <i class="fas fa-plus"></i>
+      </button>
+      <button class="favorite-btn active" onclick="removeFavoriteById('${fav.videoId}')" title="Remove from favorites">
+        <i class="fas fa-star"></i>
+      </button>
+    </div>
+  `).join('');
+}
+
+function addFavoriteToQueue(videoId) {
+  const favorites = getFavorites();
+  const fav = favorites.find(f => f.videoId === videoId);
+  if (fav) {
+    const song = {
+      videoId: fav.videoId,
+      title: fav.title,
+      thumbnail: fav.thumbnail,
+      duration: 0,
+      channel: fav.artist || 'Unknown Artist'
+    };
+    wsConnection.addSong(song);
+    document.querySelector('[data-tab="queue"]').click();
+  }
+}
+
+function removeFavoriteById(videoId) {
+  removeFavorite(videoId);
+  displayFavorites();
+  if (window.searchResultsCache) {
+    displaySearchResults(window.searchResultsCache);
+  }
+}
+
+// Listen for favorites changes
+window.addEventListener('favoritesChanged', () => {
+  // Only refresh the favorites tab if it's active
+  if (document.getElementById('favorites-tab').classList.contains('active')) {
+    displayFavorites();
+  }
+  // Don't re-render search results - this causes DOM destruction
+});
+
+// Load favorites when favorites tab is shown
+document.addEventListener('DOMContentLoaded', () => {
+  const favoritesTabs = document.querySelectorAll('[data-tab="favorites"]');
+  favoritesTabs.forEach(tab => {
+    tab.addEventListener('click', () => {
+      displayFavorites();
+    });
+  });
+});
+
 // Make functions globally available
 window.addToQueue = addToQueue;
 window.removeFromQueue = removeFromQueue;
 window.addFromHistory = addFromHistory;
+window.toggleFavorite = toggleFavorite;
+window.toggleFavoriteById = toggleFavoriteById;
+window.addFavoriteToQueue = addFavoriteToQueue;
+window.removeFavoriteById = removeFavoriteById;

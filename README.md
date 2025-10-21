@@ -12,6 +12,9 @@ A karaoke web app thrown together for parties - plays YouTube videos on a TV whi
 - 🎵 **YouTube Playback** - Plays any YouTube video (actually works, unlike iframe embeds)
 - 📱 **Phone Control** - Everyone connects via QR code
 - 🔍 **Search & Queue** - Search YouTube, add to queue
+- ⭐ **Favorites** - Save your go-to karaoke songs
+- 🎚️ **Volume & Pitch Control** - Adjust to match your voice
+- ⌨️ **Keyboard Shortcuts** - Quick controls on the TV
 - 🎬 **HD Streaming** - Uses MSE for better quality when possible
 - 💾 **Persistent Queue** - Survives server restarts
 - 🔄 **Real-time Sync** - All devices stay in sync
@@ -115,12 +118,19 @@ npm start  # from source
 ### Controls
 
 **On the TV** (host):
-- Space = Play/Pause
-- Click buttons for skip, previous, etc.
+- **Space** = Play/Pause
+- **N** = Skip to next song
+- **P** = Previous song
+- **↑/↓** = Volume up/down
+- **←/→** = Seek backward/forward 10 seconds
+- **-/=** = Pitch down/up
+- **?** = Show keyboard shortcuts help
+- Click buttons for additional controls
 
 **On phones**:
 - Search songs
 - Add to queue
+- Save favorite songs
 - Basic playback controls
 
 ## 🛠️ Technical Stuff

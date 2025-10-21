@@ -201,9 +201,17 @@ header h1 {
   cursor: pointer;
 }
 
-.song-card:hover {
+/* Only apply hover on devices with hover capability (not touch) */
+@media (hover: hover) {
+  .song-card:hover {
+    background: rgba(40, 40, 40, 0.6);
+    transform: translateX(-2px);
+  }
+}
+
+/* Touch-friendly active state for mobile */
+.song-card:active {
   background: rgba(40, 40, 40, 0.6);
-  transform: translateX(-2px);
 }
 
 .youtube-link {
@@ -641,4 +649,115 @@ header h1 {
     width: 70px;
     height: 52px;
   }
+}
+
+/* Favorite Button */
+.favorite-btn {
+  background: none;
+  border: none;
+  color: #64748b;
+  font-size: 18px;
+  padding: 0; /* Remove padding since we're using fixed dimensions */
+  cursor: pointer;
+  transition: all 0.2s;
+  flex-shrink: 0;
+  outline: none; /* Remove focus outline */
+  -webkit-tap-highlight-color: transparent; /* Remove tap highlight on mobile */
+  position: relative;
+  border-radius: 50%; /* Make button circular */
+  width: 34px;
+  height: 34px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Click animation */
+@keyframes favoriteClick {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(0.8) rotate(-10deg);
+  }
+  100% {
+    transform: scale(1) rotate(0deg);
+  }
+}
+
+/* Pulse effect for visual feedback */
+@keyframes favoritePulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(251, 191, 36, 0.7);
+  }
+  70% {
+    box-shadow: 0 0 0 10px rgba(251, 191, 36, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(251, 191, 36, 0);
+  }
+}
+
+/* Apply animation on click */
+.favorite-btn:active {
+  animation: favoriteClick 0.3s ease;
+}
+
+/* Add pulse class via JS for visual feedback */
+.favorite-btn.pulse {
+  animation: favoritePulse 0.4s;
+}
+
+/* Active (favorited) state - always yellow */
+.favorite-btn.active {
+  color: #fbbf24;
+}
+
+/* Remove focus outline on mobile */
+.favorite-btn:focus {
+  outline: none;
+}
+
+/* Optional: Only add hover effects on devices with mouse (not mobile) */
+@media (hover: hover) and (pointer: fine) {
+  .favorite-btn:not(.active):hover {
+    transform: scale(1.1);
+    opacity: 0.8;
+  }
+
+  .favorite-btn.active:hover {
+    transform: scale(1.1);
+    opacity: 0.8;
+  }
+}
+
+/* Add Button for Favorites */
+.add-btn {
+  background: #1e293b;
+  border: 1px solid #334155;
+  color: #10b981;
+  font-size: 16px;
+  padding: 8px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s;
+  flex-shrink: 0;
+  margin-right: 8px;
+}
+
+.add-btn:hover {
+  background: #334155;
+  border-color: #10b981;
+  transform: scale(1.05);
+}
+
+/* Update song-card to accommodate buttons */
+.song-card {
+  display: flex;
+  gap: 12px;
+}
+
+.song-card .song-info.clickable {
+  flex: 1;
+  cursor: pointer;
 }
