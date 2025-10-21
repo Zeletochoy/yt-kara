@@ -152,8 +152,17 @@ Files live in:
 - Just run: `pip3 install yt-dlp`
 
 **Videos won't load**
+- The app has automatic error handling that will skip failed videos after 15 seconds
+- You can manually click "Skip This Song" button when errors occur
 - Update yt-dlp: `pip3 install --upgrade yt-dlp`
 - YouTube changes their stuff constantly, yt-dlp usually catches up
+- See [Error Handling Documentation](docs/error-handling.md) for details
+
+**Connection lost / Disconnected**
+- The app automatically reconnects with exponential backoff (wait 5-10 seconds)
+- Watch the connection indicator: 🟢 connected, 🟡 reconnecting, 🔴 disconnected
+- If reconnection fails, refresh the page
+- See [Error Handling Documentation](docs/error-handling.md) for details
 
 **Can't connect from phone**
 - Make sure you're on the same WiFi
