@@ -1,6 +1,7 @@
 // Karaoke view controller
 const videoPlayer = document.getElementById('video-player');
 const noVideoDiv = document.getElementById('no-video');
+const loadingOverlay = document.getElementById('loading-overlay');
 const queueList = document.getElementById('queue-list');
 const songTitle = document.getElementById('song-title');
 const progressFill = document.getElementById('progress-fill');
@@ -484,6 +485,10 @@ async function loadVideo(song, isPlaying = true) {
   videoPlayer.removeAttribute('src');
   videoPlayer.load(); // Reset the video element
 
+  // Show loading overlay
+  loadingOverlay.style.display = 'flex';
+  noVideoDiv.style.display = 'none';
+
   // Initialize Tone.js audio routing on first video load
   if (!toneInitialized) {
     await initializeToneAudio();
@@ -548,12 +553,16 @@ async function loadVideo(song, isPlaying = true) {
     // Listen for when video is ready
     videoPlayer.addEventListener('loadedmetadata', () => {
       console.log('Video metadata loaded, readyState:', videoPlayer.readyState);
+      // Hide loading overlay when video metadata is loaded
+      loadingOverlay.style.display = 'none';
       tryAutoplay();
     }, { once: true });
 
     // Also try playing when video can play
     videoPlayer.addEventListener('canplay', () => {
       console.log('Video can play, readyState:', videoPlayer.readyState);
+      // Hide loading overlay when video can play
+      loadingOverlay.style.display = 'none';
       tryAutoplay();
     }, { once: true });
 
@@ -562,10 +571,13 @@ async function loadVideo(song, isPlaying = true) {
     // If video is already ready, try to play immediately
     if (videoPlayer.readyState >= 2) {
       console.log('Video already ready, attempting autoplay');
+      loadingOverlay.style.display = 'none';
       tryAutoplay();
     }
   } catch (error) {
     console.error('Failed to load video:', error);
+    // Hide loading overlay on error
+    loadingOverlay.style.display = 'none';
     // Skip to next on error
     setTimeout(() => wsConnection.skipSong(), 2000);
   }
