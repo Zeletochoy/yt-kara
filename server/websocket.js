@@ -69,11 +69,18 @@ function setupWebSocket(wss) {
     });
 
     ws.on('message', async (data) => {
+      let messageType = 'UNKNOWN';
       try {
         const message = JSON.parse(data);
+        messageType = message.type || 'UNKNOWN';
         await handleMessage(wss, ws, clientId, message);
       } catch (error) {
-        logger.error('Error handling message', { clientId, error: error.message });
+        logger.error('Error handling message', {
+          clientId,
+          messageType,
+          error: error.message,
+          stack: error.stack
+        });
         ws.send(JSON.stringify({
           type: 'ERROR',
           message: 'Failed to process request'

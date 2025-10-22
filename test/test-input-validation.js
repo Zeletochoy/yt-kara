@@ -13,7 +13,7 @@ async function testInputValidation() {
     // Test 1: Very long search query (> 200 chars)
     console.log('  Testing search query length validation...');
     const longQuery = 'a'.repeat(250); // 250 characters
-    const longQueryResult = await clientPage.evaluate((query) => {
+    await clientPage.evaluate((query) => {
       return new Promise((resolve) => {
         const originalSend = WebSocket.prototype.send;
         let capturedMessage = null;
@@ -24,8 +24,8 @@ async function testInputValidation() {
             if (msg.type === 'SEARCH') {
               capturedMessage = msg;
             }
-          } catch (e) {
-            // Ignore
+          } catch (_error) {
+            // Ignore parse errors
           }
           return originalSend.call(this, data);
         };

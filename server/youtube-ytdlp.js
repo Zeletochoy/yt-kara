@@ -189,7 +189,13 @@ class YouTubeService {
         return videoInfo;
       }
     } catch (error) {
-      logger.error('Failed to get video URL', { videoId, error: error.message });
+      const errorCategory = this.categorizeError(error);
+      logger.error('Failed to get video URL', {
+        videoId,
+        error: error.message,
+        category: errorCategory,
+        stack: error.stack
+      });
 
       // Clear from cache if it exists
       this.urlCache.delete(cacheKey);
@@ -200,6 +206,7 @@ class YouTubeService {
       return {
         error: true,
         message: error.message,
+        category: errorCategory,
         videoId: videoId
       };
     }
@@ -256,7 +263,12 @@ class YouTubeService {
 
       return videos;
     } catch (error) {
-      logger.error('Search failed', { query, error: error.message });
+      const errorCategory = this.categorizeError(error);
+      logger.error('Search failed', {
+        query,
+        error: error.message,
+        category: errorCategory
+      });
 
       // Return empty results instead of throwing
       return [];
@@ -278,8 +290,47 @@ class YouTubeService {
 
     // Run in background without awaiting
     this.getVideoUrl(videoId, true).catch(error => {
-      logger.error('Failed to prefetch', { videoId, error: error.message });
+      const errorCategory = this.categorizeError(error);
+      logger.error('Failed to prefetch', {
+        videoId,
+        error: error.message,
+        category: errorCategory
+      });
     });
+  }
+
+  // Categorize errors for better debugging
+  categorizeError(error) {
+    const message = error.message?.toLowerCase() || '';
+    const stderr = error.stderr?.toLowerCase() || '';
+    const combined = message + ' ' + stderr;
+
+    if (combined.includes('video unavailable') || combined.includes('video not available')) {
+      return 'VIDEO_UNAVAILABLE';
+    }
+    if (combined.includes('private video') || combined.includes('members-only')) {
+      return 'ACCESS_RESTRICTED';
+    }
+    if (combined.includes('age-restricted') || combined.includes('sign in to confirm')) {
+      return 'AGE_RESTRICTED';
+    }
+    if (combined.includes('copyright') || combined.includes('blocked')) {
+      return 'COPYRIGHT_BLOCKED';
+    }
+    if (combined.includes('timeout') || combined.includes('timed out')) {
+      return 'NETWORK_TIMEOUT';
+    }
+    if (combined.includes('connection') || combined.includes('network')) {
+      return 'NETWORK_ERROR';
+    }
+    if (combined.includes('rate limit') || combined.includes('too many requests')) {
+      return 'RATE_LIMITED';
+    }
+    if (combined.includes('no video formats')) {
+      return 'NO_FORMATS';
+    }
+
+    return 'UNKNOWN';
   }
 }
 
