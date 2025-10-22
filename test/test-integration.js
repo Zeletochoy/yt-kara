@@ -106,6 +106,40 @@ async function testIntegration() {
 
   console.log('  ✓ Logger respects log levels and formats correctly');
 
+  // Test 4: Cache race condition scenario
+  console.log('  Testing cache race condition protection...');
+
+  const raceVideoId = 'race-test-video';
+
+  // Scenario: File is accessed (streaming starts)
+  cacheManager.lastAccessedAt.set(raceVideoId, Date.now());
+
+  // Immediate deletion attempt (race condition: cleanup runs while streaming)
+  const isDeletableDuringStream = cacheManager.isSafeToDelete(raceVideoId, 60000);
+  assert.strictEqual(isDeletableDuringStream, false,
+    'File should NOT be deletable while being actively streamed (within grace period)');
+
+  // Simulate waiting 30 seconds (still streaming)
+  cacheManager.lastAccessedAt.set(raceVideoId, Date.now() - 30000);
+  const isDeletableAfter30s = cacheManager.isSafeToDelete(raceVideoId, 60000);
+  assert.strictEqual(isDeletableAfter30s, false,
+    'File should NOT be deletable after 30s (within 60s grace period)');
+
+  // Simulate waiting 61 seconds (stream finished, grace period expired)
+  cacheManager.lastAccessedAt.set(raceVideoId, Date.now() - 61000);
+  const isDeletableAfter61s = cacheManager.isSafeToDelete(raceVideoId, 60000);
+  assert.strictEqual(isDeletableAfter61s, true,
+    'File SHOULD be deletable after grace period expires');
+
+  // Scenario: Multiple access attempts during streaming
+  cacheManager.lastAccessedAt.set(raceVideoId, Date.now() - 10000); // 10s ago
+  cacheManager.lastAccessedAt.set(raceVideoId, Date.now()); // Update to now (simulates re-access)
+  const isDeletableAfterReaccess = cacheManager.isSafeToDelete(raceVideoId, 60000);
+  assert.strictEqual(isDeletableAfterReaccess, false,
+    'File should NOT be deletable when re-accessed (grace period resets)');
+
+  console.log('  ✓ Cache race condition protection works correctly');
+
   console.log('✅ Integration tests passed');
   return true;
 }

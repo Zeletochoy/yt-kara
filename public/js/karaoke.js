@@ -4,7 +4,6 @@ const noVideoDiv = document.getElementById('no-video');
 const loadingOverlay = document.getElementById('loading-overlay');
 const errorOverlay = document.getElementById('error-overlay');
 const errorMessageEl = document.getElementById('error-message');
-const errorCountdownEl = document.getElementById('error-countdown');
 const skipErrorBtn = document.getElementById('skip-error-btn');
 const queueList = document.getElementById('queue-list');
 const songTitle = document.getElementById('song-title');
@@ -15,8 +14,6 @@ const totalTimeEl = document.getElementById('total-time');
 
 let currentVideoUrl = null;
 let playbackUpdateInterval = null;
-let errorCountdownTimer = null;
-let loadingTimeoutTimer = null;
 
 // Tone.js audio context for pitch shifting
 let toneInitialized = false;
@@ -258,14 +255,8 @@ function setupVideoPlayer() {
       videoId: currentVideoUrl?.videoId
     });
 
-    // Clear loading timeout if active
-    if (loadingTimeoutTimer) {
-      clearTimeout(loadingTimeoutTimer);
-      loadingTimeoutTimer = null;
-    }
-
-    // Show error and auto-skip
-    showErrorOverlay('This video is unavailable. Skipping to next song...');
+    // Show error overlay
+    showErrorOverlay('This video is unavailable.');
   });
 }
 
@@ -514,12 +505,6 @@ async function updateUI(state) {
 async function loadVideo(song, isPlaying = true) {
   console.log('LoadVideo called for:', song.title, 'current:', currentVideoUrl?.videoId, 'new:', song.videoId);
 
-  // Clear any existing loading timeout
-  if (loadingTimeoutTimer) {
-    clearTimeout(loadingTimeoutTimer);
-    loadingTimeoutTimer = null;
-  }
-
   // Hide error overlay if visible
   hideErrorOverlay();
 
@@ -543,12 +528,6 @@ async function loadVideo(song, isPlaying = true) {
   // Show loading overlay
   loadingOverlay.style.display = 'flex';
   noVideoDiv.style.display = 'none';
-
-  // Set loading timeout (10 seconds)
-  loadingTimeoutTimer = setTimeout(() => {
-    console.error('[Loading Timeout] Video failed to load within 10 seconds');
-    showErrorOverlay('Video is taking too long to load. Skipping to next song...');
-  }, 10000);
 
   // Initialize Tone.js audio routing on first video load
   if (!toneInitialized) {
@@ -614,11 +593,6 @@ async function loadVideo(song, isPlaying = true) {
     // Listen for when video is ready
     videoPlayer.addEventListener('loadedmetadata', () => {
       console.log('Video metadata loaded, readyState:', videoPlayer.readyState);
-      // Clear loading timeout on successful load
-      if (loadingTimeoutTimer) {
-        clearTimeout(loadingTimeoutTimer);
-        loadingTimeoutTimer = null;
-      }
       // Hide loading overlay when video metadata is loaded
       loadingOverlay.style.display = 'none';
       tryAutoplay();
@@ -627,11 +601,6 @@ async function loadVideo(song, isPlaying = true) {
     // Also try playing when video can play
     videoPlayer.addEventListener('canplay', () => {
       console.log('Video can play, readyState:', videoPlayer.readyState);
-      // Clear loading timeout on successful load
-      if (loadingTimeoutTimer) {
-        clearTimeout(loadingTimeoutTimer);
-        loadingTimeoutTimer = null;
-      }
       // Hide loading overlay when video can play
       loadingOverlay.style.display = 'none';
       tryAutoplay();
@@ -642,23 +611,13 @@ async function loadVideo(song, isPlaying = true) {
     // If video is already ready, try to play immediately
     if (videoPlayer.readyState >= 2) {
       console.log('Video already ready, attempting autoplay');
-      // Clear loading timeout on successful load
-      if (loadingTimeoutTimer) {
-        clearTimeout(loadingTimeoutTimer);
-        loadingTimeoutTimer = null;
-      }
       loadingOverlay.style.display = 'none';
       tryAutoplay();
     }
   } catch (error) {
     console.error('Failed to load video:', error);
-    // Clear loading timeout on error
-    if (loadingTimeoutTimer) {
-      clearTimeout(loadingTimeoutTimer);
-      loadingTimeoutTimer = null;
-    }
-    // Show error overlay instead of just hiding loading
-    showErrorOverlay('Failed to load video. Skipping to next song...');
+    // Show error overlay
+    showErrorOverlay('Failed to load video.');
   }
 }
 
@@ -839,44 +798,15 @@ function showErrorOverlay(message) {
   // Hide loading overlay if visible
   loadingOverlay.style.display = 'none';
 
-  // Clear any existing countdown timer
-  if (errorCountdownTimer) {
-    clearTimeout(errorCountdownTimer);
-    errorCountdownTimer = null;
-  }
-
   // Set error message
   errorMessageEl.textContent = message;
 
   // Show error overlay
   errorOverlay.style.display = 'flex';
-
-  // Start countdown for auto-skip (15 seconds)
-  let countdown = 15;
-  errorCountdownEl.textContent = countdown;
-
-  const countdownInterval = setInterval(() => {
-    countdown--;
-    errorCountdownEl.textContent = countdown;
-
-    if (countdown <= 0) {
-      clearInterval(countdownInterval);
-      hideErrorOverlay();
-      wsConnection.skipSong();
-    }
-  }, 1000);
-
-  errorCountdownTimer = countdownInterval;
 }
 
 function hideErrorOverlay() {
   console.log('[Error Overlay] Hiding');
-
-  // Clear countdown timer
-  if (errorCountdownTimer) {
-    clearTimeout(errorCountdownTimer);
-    errorCountdownTimer = null;
-  }
 
   // Hide error overlay
   errorOverlay.style.display = 'none';

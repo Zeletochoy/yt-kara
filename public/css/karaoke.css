@@ -661,17 +661,12 @@ body {
   font-weight: 600;
   cursor: pointer;
   transition: all 0.2s;
+  margin-top: 8px;
 }
 
 .error-btn:hover {
   background: #dc2626;
   transform: scale(1.05);
-}
-
-.error-auto-skip {
-  color: #94a3b8;
-  font-size: 14px;
-  margin: 0;
 }
 
 /* Reaction Animations */
