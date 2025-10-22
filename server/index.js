@@ -4,6 +4,7 @@ const WebSocket = require('ws');
 const path = require('path');
 const os = require('os');
 const localtunnel = require('localtunnel');
+const logger = require('./logger');
 
 require('./state');
 require('./youtube-ytdlp');
@@ -64,7 +65,7 @@ app.get('/api/video/:id', async (req, res) => {
       duration: metadata.duration
     });
   } catch (error) {
-    console.error('Error getting video:', error);
+    logger.error('Error getting video', { error: error.message, videoId: req.params.videoId });
     res.status(500).json({
       error: 'Failed to get video',
       message: error.message
@@ -84,7 +85,7 @@ app.get('/api/stream/:videoId', (req, res) => {
 
     res.sendFile(filePath);
   } catch (error) {
-    console.error('Video stream error:', error);
+    logger.error('Video stream error', { error: error.message, videoId: req.params.videoId });
     res.status(500).json({ error: true, message: error.message });
   }
 });
@@ -112,18 +113,18 @@ server.listen(PORT, async () => {
   // Create tunnel if enabled
   if (process.env.ENABLE_TUNNEL === 'true') {
     try {
-      console.log('Creating tunnel...');
+      logger.info('Creating tunnel...');
       const tunnel = await localtunnel({ port: PORT });
       tunnelUrl = tunnel.url;
 
       // Handle tunnel errors (crash if tunnel fails)
       tunnel.on('error', (err) => {
-        console.error('Tunnel error:', err);
+        logger.error('Tunnel error', { error: err.message });
         process.exit(1);
       });
 
       tunnel.on('close', () => {
-        console.log('Tunnel closed');
+        logger.info('Tunnel closed');
       });
 
       // Fetch the tunnel password (which is the server's public IP address)
@@ -138,11 +139,11 @@ server.listen(PORT, async () => {
         });
         tunnelPassword = ipResponse.trim();
       } catch (err) {
-        console.log('Could not fetch public IP for tunnel password:', err.message);
+        logger.warn('Could not fetch public IP for tunnel password', { error: err.message });
       }
 
       if (tunnelPassword) {
-        console.log(`
+        logger.info(`
 🎤 YT-Kara Server Started
 
   Local:    http://localhost:${PORT}
@@ -154,7 +155,7 @@ server.listen(PORT, async () => {
   They will need to enter the password above.
         `);
       } else {
-        console.log(`
+        logger.info(`
 🎤 YT-Kara Server Started
 
   Local:   http://localhost:${PORT}
@@ -166,11 +167,11 @@ server.listen(PORT, async () => {
         `);
       }
     } catch (error) {
-      console.error('Failed to create tunnel:', error);
+      logger.error('Failed to create tunnel', { error: error.message });
       process.exit(1);
     }
   } else {
-    console.log(`
+    logger.info(`
 🎤 YT-Kara Server Started
 
   Local:   http://localhost:${PORT}

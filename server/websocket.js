@@ -2,6 +2,7 @@ const WebSocket = require('ws');
 const state = require('./state');
 const youtube = require('./youtube-ytdlp');
 const cacheManager = require('./cache-manager');
+const logger = require('./logger');
 
 let clientIdCounter = 1;
 const clientNames = new Map();
@@ -46,7 +47,7 @@ function setupWebSocket(wss) {
     const clientId = `client-${clientIdCounter++}`;
     ws.clientId = clientId;
 
-    console.log(`Client connected: ${clientId}`);
+    logger.info('Client connected', { clientId });
     state.addClient(clientId);
 
     // Send initial state
@@ -72,7 +73,7 @@ function setupWebSocket(wss) {
         const message = JSON.parse(data);
         await handleMessage(wss, ws, clientId, message);
       } catch (error) {
-        console.error('Error handling message:', error);
+        logger.error('Error handling message', { clientId, error: error.message });
         ws.send(JSON.stringify({
           type: 'ERROR',
           message: 'Failed to process request'
@@ -81,7 +82,7 @@ function setupWebSocket(wss) {
     });
 
     ws.on('close', () => {
-      console.log(`Client disconnected: ${clientId}`);
+      logger.info('Client disconnected', { clientId });
       state.removeClient(clientId);
       lastReactionTime.delete(clientId);
       broadcast(wss, {
@@ -91,7 +92,7 @@ function setupWebSocket(wss) {
     });
 
     ws.on('error', (error) => {
-      console.error(`WebSocket error for ${clientId}:`, error);
+      logger.error('WebSocket error', { clientId, error: error.message });
     });
   });
 
@@ -259,7 +260,7 @@ async function handleMessage(wss, ws, clientId, message) {
   }
 
   default:
-    console.warn(`Unknown message type: ${message.type}`);
+    logger.warn('Unknown message type', { type: message.type, clientId });
   }
 }
 

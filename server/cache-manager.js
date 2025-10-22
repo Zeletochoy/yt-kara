@@ -2,6 +2,7 @@ const { exec } = require('child_process');
 const util = require('util');
 const fs = require('fs');
 const path = require('path');
+const logger = require('./logger');
 const execPromise = util.promisify(exec);
 
 class CacheManager {
@@ -37,13 +38,13 @@ class CacheManager {
 
       // If metadata exists but video file doesn't, clean up corrupted cache
       if (!exists) {
-        console.warn(`[Cache] Corrupted cache detected for ${videoId}, cleaning up`);
+        logger.warn('[Cache] Corrupted cache detected', { videoId });
         this.deleteVideo(videoId);
       }
 
       return exists;
     } catch (error) {
-      console.error(`[Cache] Error checking cache for ${videoId}:`, error.message);
+      logger.error('[Cache] Error checking cache', { videoId, error: error.message });
       // Clean up corrupted cache entry
       this.deleteVideo(videoId);
       return false;
@@ -64,14 +65,14 @@ class CacheManager {
 
       // Validate metadata structure
       if (!metadata.videoFile || !metadata.duration) {
-        console.warn(`[Cache] Invalid metadata structure for ${videoId}, cleaning up`);
+        logger.warn('[Cache] Invalid metadata structure', { videoId });
         this.deleteVideo(videoId);
         return null;
       }
 
       return metadata;
     } catch (error) {
-      console.error(`[Cache] Error reading metadata for ${videoId}:`, error.message);
+      logger.error('[Cache] Error reading metadata', { videoId, error: error.message });
       // Clean up corrupted metadata
       this.deleteVideo(videoId);
       return null;
@@ -91,7 +92,7 @@ class CacheManager {
     }
 
     // Add to queue and wait
-    console.log(`[Cache] Video ${videoId} not cached, starting download`);
+    logger.info('[Cache] Video not cached, starting download', { videoId });
     const promise = new Promise((resolve, reject) => {
       // Add to queue with promise handlers
       this.downloadQueue.push({ videoId, resolve, reject });
@@ -118,14 +119,14 @@ class CacheManager {
     const { videoId, resolve, reject } = this.downloadQueue.shift();
     this.downloading = videoId;
 
-    console.log(`[Cache] Starting download: ${videoId} (${this.downloadQueue.length} remaining in queue)`);
+    logger.info('[Cache] Starting download', { videoId, queueLength: this.downloadQueue.length });
 
     try {
       const metadata = await this.downloadVideo(videoId);
       resolve(metadata);
-      console.log(`[Cache] Download complete: ${videoId}`);
+      logger.info('[Cache] Download complete', { videoId });
     } catch (error) {
-      console.error(`[Cache] Download failed: ${videoId}`, error);
+      logger.error('[Cache] Download failed:', { videoId, error: error.message });
       reject(error);
     } finally {
       this.downloading = null;
@@ -207,7 +208,7 @@ class CacheManager {
       }
 
       // Add to queue
-      console.log(`[Cache] Adding to prefetch queue: ${videoId}`);
+      logger.debug('[Cache] Adding to prefetch queue', { videoId });
       const promise = new Promise((resolve, reject) => {
         this.downloadQueue.push({ videoId, resolve, reject });
       });
@@ -216,7 +217,7 @@ class CacheManager {
 
       // Don't await - prefetch in background
       promise.catch(err => {
-        console.error(`[Cache] Prefetch failed for ${videoId}:`, err.message);
+        logger.error('[Cache] Prefetch failed for', { videoId, error: err.message });
       });
     }
 
@@ -229,11 +230,11 @@ class CacheManager {
 
     try {
       if (fs.existsSync(videoDir)) {
-        console.log(`[Cache] Deleting cached video: ${videoId}`);
+        logger.debug('[Cache] Deleting cached video', { videoId });
         fs.rmSync(videoDir, { recursive: true, force: true });
       }
     } catch (error) {
-      console.error(`[Cache] Error deleting video ${videoId}:`, error.message);
+      logger.error('[Cache] Error deleting video', { videoId, error: error.message });
       // Try again with force flag
       try {
         if (fs.existsSync(videoDir)) {
@@ -247,7 +248,7 @@ class CacheManager {
 
   // Invalidate cache for a failed video (alias for deleteVideo with better semantics)
   invalidate(videoId) {
-    console.log(`[Cache] Invalidating cache for failed video: ${videoId}`);
+    logger.info('[Cache] Invalidating cache for failed video', { videoId });
     this.deleteVideo(videoId);
 
     // Also remove from download queue if present
@@ -255,7 +256,7 @@ class CacheManager {
 
     // Cancel active download if it's for this video
     if (this.downloading === videoId) {
-      console.log(`[Cache] Cancelling in-progress download for: ${videoId}`);
+      logger.info('[Cache] Cancelling in-progress download', { videoId });
       this.downloading = null;
       this.downloadPromises.delete(videoId);
     }

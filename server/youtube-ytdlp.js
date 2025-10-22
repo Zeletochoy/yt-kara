@@ -1,4 +1,5 @@
 const { exec } = require('child_process');
+const logger = require('./logger');
 const util = require('util');
 const fs = require('fs');
 const path = require('path');
@@ -16,23 +17,23 @@ class YouTubeService {
   async checkYtDlp() {
     try {
       await execPromise('which yt-dlp');
-      console.log('✓ yt-dlp is available for video extraction');
+      logger.info('yt-dlp is available for video extraction');
     } catch {
-      console.error('\n❌ yt-dlp is not installed!');
-      console.error('Please run: node setup.js');
-      console.error('Or install manually: pip3 install yt-dlp');
+      logger.error('yt-dlp is not installed');
+      logger.error('Please run: node setup.js');
+      logger.error('Or install manually: pip3 install yt-dlp');
       process.exit(1);
     }
   }
 
   async setupCookies() {
     if (fs.existsSync(this.cookiesFile)) {
-      console.log('✓ Using cached cookies from data/cookies.txt');
+      logger.info('Using cached cookies from data/cookies.txt');
       return;
     }
 
-    console.log('Setting up YouTube cookies (one-time setup)...');
-    console.log('You may be prompted to unlock your keychain ONCE.');
+    logger.info('Setting up YouTube cookies (one-time setup)');
+    logger.info('You may be prompted to unlock your keychain ONCE');
 
     // Ensure data directory exists
     const dataDir = path.dirname(this.cookiesFile);
@@ -47,10 +48,10 @@ class YouTubeService {
       );
 
       if (fs.existsSync(this.cookiesFile)) {
-        console.log('✓ Cookies cached successfully');
+        logger.info('Cookies cached successfully');
       }
     } catch {
-      console.log('⚠ Could not cache cookies. Videos may be restricted.');
+      logger.warn('Could not cache cookies - videos may be restricted');
     }
   }
 
@@ -78,7 +79,7 @@ class YouTubeService {
 
       if (hdMode) {
         // Get separate video and audio URLs for HD playback
-        console.log(`Getting HD streams for ${videoId}`);
+        logger.debug('Getting HD streams', { videoId });
 
         const cookiesArg = this.getCookiesArg();
 
@@ -188,7 +189,7 @@ class YouTubeService {
         return videoInfo;
       }
     } catch (error) {
-      console.error(`Failed to get video URL for ${videoId}:`, error.message);
+      logger.error('Failed to get video URL', { videoId, error: error.message });
 
       // Clear from cache if it exists
       this.urlCache.delete(cacheKey);
@@ -255,7 +256,7 @@ class YouTubeService {
 
       return videos;
     } catch (error) {
-      console.error(`Search failed for "${query}":`, error.message);
+      logger.error('Search failed', { query, error: error.message });
 
       // Return empty results instead of throwing
       return [];
@@ -269,15 +270,15 @@ class YouTubeService {
     const normalCacheKey = videoId;
 
     if (this.urlCache.has(hdCacheKey) || this.urlCache.has(normalCacheKey)) {
-      console.log(`URL already cached for ${videoId}`);
+      logger.debug('URL already cached', { videoId });
       return;
     }
 
-    console.log(`Prefetching URL for ${videoId}...`);
+    logger.debug('Prefetching URL', { videoId });
 
     // Run in background without awaiting
     this.getVideoUrl(videoId, true).catch(error => {
-      console.error(`Failed to prefetch ${videoId}:`, error.message);
+      logger.error('Failed to prefetch', { videoId, error: error.message });
     });
   }
 }

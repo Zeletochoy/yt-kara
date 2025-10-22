@@ -1,4 +1,5 @@
 const fs = require('fs');
+const logger = require('./logger');
 const path = require('path');
 
 // Session state management
@@ -41,12 +42,12 @@ class SessionState {
         this.pitch = 0;
         this.dirty = false; // Track if state has changed since last save
 
-        console.log('✓ Restored previous session state');
+        logger.info('Restored previous session state');
       } else {
         this.reset();
       }
     } catch (error) {
-      console.error('Failed to load state:', error);
+      logger.error('Failed to load state', { error: error.message });
       this.reset();
     }
   }
@@ -65,7 +66,7 @@ class SessionState {
       fs.writeFileSync(this.stateFile, JSON.stringify(stateToSave, null, 2));
       this.dirty = false; // Clear dirty flag after successful save
     } catch (error) {
-      console.error('Failed to save state:', error);
+      logger.error('Failed to save state', { error: error.message });
     }
   }
 
