@@ -67,6 +67,10 @@ function setupConnection() {
     updateUI(message.state);
   });
 
+  wsConnection.on('REACTION_RECEIVED', (message) => {
+    displayReaction(message.reaction);
+  });
+
   wsConnection.connect();
 }
 
@@ -867,6 +871,37 @@ function hideErrorOverlay() {
   errorOverlay.style.display = 'none';
 }
 
+function displayReaction(reaction) {
+  // Only display reactions during video playback
+  if (!videoPlayer || videoPlayer.paused) {
+    return;
+  }
+
+  const container = document.getElementById('reaction-container');
+  if (!container) {
+    return;
+  }
+
+  // Create reaction element
+  const reactionEl = document.createElement('div');
+  reactionEl.className = 'reaction';
+  reactionEl.textContent = reaction.type;
+
+  // Random horizontal position (10% to 90% of width)
+  const randomX = 10 + Math.random() * 80;
+  reactionEl.style.left = `${randomX}%`;
+
+  // Add to container
+  container.appendChild(reactionEl);
+
+  // Remove after animation completes (2.5s)
+  setTimeout(() => {
+    if (reactionEl.parentNode) {
+      reactionEl.parentNode.removeChild(reactionEl);
+    }
+  }, 2500);
+}
+
 // Expose for testing
 if (typeof window !== 'undefined') {
   window.__test__ = {
@@ -874,4 +909,6 @@ if (typeof window !== 'undefined') {
     get pitchShifter() { return pitchShifter; },
     get mediaElementSource() { return mediaElementSource; }
   };
+  window.showErrorOverlay = showErrorOverlay;
+  window.displayReaction = displayReaction;
 }

@@ -776,3 +776,53 @@ header h1 {
   flex: 1;
   cursor: pointer;
 }
+
+/* Reaction Buttons */
+#reaction-buttons {
+  display: flex;
+  gap: 12px;
+  margin-top: 24px;
+  padding-top: 20px;
+  border-top: 1px solid #334155;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.reaction-btn {
+  background: #1e293b;
+  border: 2px solid #334155;
+  font-size: 32px;
+  width: 70px;
+  height: 70px;
+  border-radius: 50%;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.reaction-btn:active {
+  transform: scale(0.85);
+  background: #334155;
+  border-color: #3b82f6;
+  animation: reactionPulse 0.3s ease-out;
+}
+
+.reaction-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+@keyframes reactionPulse {
+  0% {
+    transform: scale(0.85);
+  }
+  50% {
+    transform: scale(1.15);
+  }
+  100% {
+    transform: scale(1);
+  }
+}

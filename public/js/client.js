@@ -93,6 +93,30 @@ pitchDownBtn?.addEventListener('click', () => {
   }
 });
 
+// Reaction buttons
+const reactionButtons = document.querySelectorAll('.reaction-btn');
+let lastReactionTime = 0;
+
+reactionButtons.forEach(btn => {
+  btn.addEventListener('click', () => {
+    const now = Date.now();
+    // Client-side throttling: 1 reaction per second
+    if (now - lastReactionTime < 1000) {
+      return;
+    }
+
+    const reactionType = btn.getAttribute('data-reaction');
+    wsConnection.sendReaction(reactionType);
+    lastReactionTime = now;
+
+    // Disable button temporarily for visual feedback
+    btn.disabled = true;
+    setTimeout(() => {
+      btn.disabled = false;
+    }, 1000);
+  });
+});
+
 function updatePlayPauseButton(isPlaying) {
   const btn = document.getElementById('remote-play-pause');
   if (btn) {

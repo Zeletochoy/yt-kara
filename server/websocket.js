@@ -5,6 +5,7 @@ const cacheManager = require('./cache-manager');
 
 let clientIdCounter = 1;
 const clientNames = new Map();
+const lastReactionTime = new Map(); // Throttle reactions per client
 let previousSongId = null;
 let lastSongId = null;
 
@@ -50,6 +51,7 @@ function setupWebSocket(wss) {
     ws.on('close', () => {
       console.log(`Client disconnected: ${clientId}`);
       state.removeClient(clientId);
+      lastReactionTime.delete(clientId);
       broadcast(wss, {
         type: 'CLIENT_LEFT',
         clientId
@@ -183,6 +185,32 @@ async function handleMessage(wss, ws, clientId, message) {
     state.setPitch(message.pitch);
     broadcastState(wss);
     break;
+
+  case 'SEND_REACTION': {
+    // Throttle reactions to 1 per second per client
+    const now = Date.now();
+    const lastTime = lastReactionTime.get(clientId) || 0;
+    const throttleMs = 1000; // 1 second
+
+    if (now - lastTime < throttleMs) {
+      // Too soon, ignore
+      break;
+    }
+
+    // Update last reaction time
+    lastReactionTime.set(clientId, now);
+
+    // Broadcast reaction to all clients (especially host)
+    broadcast(wss, {
+      type: 'REACTION_RECEIVED',
+      reaction: {
+        type: message.reactionType,
+        clientId: clientId,
+        timestamp: now
+      }
+    });
+    break;
+  }
 
   default:
     console.warn(`Unknown message type: ${message.type}`);

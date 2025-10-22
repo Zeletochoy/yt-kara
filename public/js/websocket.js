@@ -170,6 +170,10 @@ class WSConnection {
   setPitch(pitch) {
     this.send({ type: 'SET_PITCH', pitch });
   }
+
+  sendReaction(reactionType) {
+    this.send({ type: 'SEND_REACTION', reactionType });
+  }
 }
 
 // Create global connection instance
