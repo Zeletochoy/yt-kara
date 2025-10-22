@@ -23,6 +23,104 @@ function escapeHtml(unsafe) {
     .replace(/'/g, '&#039;');
 }
 
+// HTML Generation: Reusable song card component
+function createSongCard(song, options = {}) {
+  const {
+    type = 'default', // 'queue', 'history', 'search', 'favorite'
+    index = null,
+    onClickAction = null,
+    additionalMeta = '',
+    extraButtons = ''
+  } = options;
+
+  const thumbnail = escapeHtml(song.thumbnail);
+  const title = escapeHtml(song.title);
+
+  // Build meta information based on type
+  let metaHtml = '';
+  if (type === 'queue') {
+    metaHtml = `Added by ${escapeHtml(song.addedBy || 'Unknown')}`;
+  } else if (type === 'history') {
+    metaHtml = `Played ${getRelativeTime(song.playedAt)}`;
+  } else if (type === 'search') {
+    metaHtml = `${escapeHtml(song.channel)} • ${formatTime(song.duration)}`;
+  } else if (type === 'favorite') {
+    metaHtml = escapeHtml(song.artist || 'Unknown Artist');
+  } else if (additionalMeta) {
+    metaHtml = additionalMeta;
+  }
+
+  // Build action buttons based on type
+  let buttonsHtml = '';
+  if (type === 'queue') {
+    buttonsHtml = `<button class="remove-btn" onclick="removeFromQueue(${song.id})" title="Remove from queue"><i class="fas fa-times"></i></button>`;
+  } else if (type === 'history') {
+    buttonsHtml = `<button class="song-action" onclick="addFromHistory('${escapeHtml(song.videoId)}', '${encodeURIComponent(song.title)}', '${encodeURIComponent(song.thumbnail)}', ${song.duration || 0})" title="Add this song to the queue again">Add Again</button>`;
+  } else if (type === 'search') {
+    const isFav = isFavorite(song.videoId);
+    buttonsHtml = `
+      <button class="favorite-btn ${isFav ? 'active' : ''}" data-video-id="${escapeHtml(song.videoId)}" data-index="${index}" title="${isFav ? 'Remove from favorites' : 'Add to favorites'}">
+        <i class="fas fa-star"></i>
+      </button>`;
+  } else if (type === 'favorite') {
+    buttonsHtml = `
+      <button class="add-btn" onclick="addFavoriteToQueue('${escapeHtml(song.videoId)}')" title="Add to queue">
+        <i class="fas fa-plus"></i>
+      </button>
+      <button class="favorite-btn active" onclick="removeFavoriteById('${escapeHtml(song.videoId)}')" title="Remove from favorites">
+        <i class="fas fa-star"></i>
+      </button>`;
+  } else if (extraButtons) {
+    buttonsHtml = extraButtons;
+  }
+
+  // Special handling for queue items (draggable with handle)
+  if (type === 'queue') {
+    return `
+      <div class="song-card queue-item" data-index="${index}" draggable="true">
+        <div class="drag-handle"><i class="fas fa-grip-vertical"></i></div>
+        <img src="${thumbnail}" alt="" class="song-thumbnail">
+        <div class="song-info">
+          <div class="song-title">${title}</div>
+          <div class="song-meta">${metaHtml}</div>
+        </div>
+        ${buttonsHtml}
+      </div>`;
+  }
+
+  // Special handling for search results (clickable info area, YouTube link)
+  if (type === 'search') {
+    return `
+      <div class="song-card">
+        <img src="${thumbnail}" alt="" class="song-thumbnail">
+        <div class="song-info clickable" onclick="addToQueue(${index})" title="Click to add to queue">
+          <div class="song-title">${title}</div>
+          <div class="song-meta">
+            ${metaHtml}
+            <a href="https://www.youtube.com/watch?v=${escapeHtml(song.videoId)}" target="_blank" class="youtube-link" onclick="event.stopPropagation()" title="Watch on YouTube">
+              <i class="fab fa-youtube"></i>
+            </a>
+          </div>
+        </div>
+        ${buttonsHtml}
+      </div>`;
+  }
+
+  // Default card structure
+  const infoClass = onClickAction ? 'song-info clickable' : 'song-info';
+  const infoOnClick = onClickAction ? `onclick="${onClickAction}"` : '';
+
+  return `
+    <div class="song-card">
+      <img src="${thumbnail}" alt="" class="song-thumbnail">
+      <div class="${infoClass}" ${infoOnClick}>
+        <div class="song-title">${title}</div>
+        <div class="song-meta">${metaHtml}</div>
+      </div>
+      ${buttonsHtml}
+    </div>`;
+}
+
 // Tab handling
 const tabs = document.querySelectorAll('.tab');
 const panels = document.querySelectorAll('.tab-panel');
@@ -284,17 +382,9 @@ function updateUI(state) {
 
   // Update queue
   if (state.queue.length > 0) {
-    queueListEl.innerHTML = state.queue.map((item, index) => `
-      <div class="song-card queue-item" data-index="${index}" draggable="true">
-        <div class="drag-handle"><i class="fas fa-grip-vertical"></i></div>
-        <img src="${escapeHtml(item.thumbnail)}" alt="" class="song-thumbnail">
-        <div class="song-info">
-          <div class="song-title">${escapeHtml(item.title)}</div>
-          <div class="song-meta">Added by ${escapeHtml(item.addedBy || 'Unknown')}</div>
-        </div>
-        <button class="remove-btn" onclick="removeFromQueue(${item.id})" title="Remove from queue"><i class="fas fa-times"></i></button>
-      </div>
-    `).join('');
+    queueListEl.innerHTML = state.queue.map((item, index) =>
+      createSongCard(item, { type: 'queue', index })
+    ).join('');
 
     // Set up drag and drop
     setupQueueDragDrop();
@@ -304,16 +394,9 @@ function updateUI(state) {
 
   // Update history
   if (state.history && state.history.length > 0) {
-    historyList.innerHTML = state.history.reverse().map(item => `
-      <div class="song-card">
-        <img src="${escapeHtml(item.thumbnail)}" alt="" class="song-thumbnail">
-        <div class="song-info">
-          <div class="song-title">${escapeHtml(item.title)}</div>
-          <div class="song-meta">Played ${getRelativeTime(item.playedAt)}</div>
-        </div>
-        <button class="song-action" onclick="addFromHistory('${escapeHtml(item.videoId)}', '${encodeURIComponent(item.title)}', '${encodeURIComponent(item.thumbnail)}', ${item.duration || 0})" title="Add this song to the queue again">Add Again</button>
-      </div>
-    `).join('');
+    historyList.innerHTML = state.history.reverse().map(item =>
+      createSongCard(item, { type: 'history' })
+    ).join('');
   } else {
     historyList.innerHTML = '<div class="empty-state"><p>No history yet</p></div>';
   }
@@ -332,26 +415,9 @@ function displaySearchResults(results) {
   // Store results globally for access by addToQueue
   window.searchResultsCache = results;
 
-  searchResults.innerHTML = results.map((item, index) => {
-    const isFav = isFavorite(item.videoId);
-    return `
-    <div class="song-card">
-      <img src="${escapeHtml(item.thumbnail)}" alt="" class="song-thumbnail">
-      <div class="song-info clickable" onclick="addToQueue(${index})" title="Click to add to queue">
-        <div class="song-title">${escapeHtml(item.title)}</div>
-        <div class="song-meta">
-          ${escapeHtml(item.channel)} • ${formatTime(item.duration)}
-          <a href="https://www.youtube.com/watch?v=${escapeHtml(item.videoId)}" target="_blank" class="youtube-link" onclick="event.stopPropagation()" title="Watch on YouTube">
-            <i class="fab fa-youtube"></i>
-          </a>
-        </div>
-      </div>
-      <button class="favorite-btn ${isFav ? 'active' : ''}" data-video-id="${escapeHtml(item.videoId)}" data-index="${index}" title="${isFav ? 'Remove from favorites' : 'Add to favorites'}">
-        <i class="fas fa-star"></i>
-      </button>
-    </div>
-  `;
-  }).join('');
+  searchResults.innerHTML = results.map((item, index) =>
+    createSongCard(item, { type: 'search', index })
+  ).join('');
 
   // Set up event delegation for favorite buttons
   setupFavoriteButtons();
@@ -670,21 +736,9 @@ function displayFavorites() {
     return;
   }
 
-  favoritesListEl.innerHTML = favorites.map(fav => `
-    <div class="song-card">
-      <img src="${escapeHtml(fav.thumbnail)}" alt="" class="song-thumbnail">
-      <div class="song-info">
-        <div class="song-title">${escapeHtml(fav.title)}</div>
-        <div class="song-meta">${escapeHtml(fav.artist || 'Unknown Artist')}</div>
-      </div>
-      <button class="add-btn" onclick="addFavoriteToQueue('${escapeHtml(fav.videoId)}')" title="Add to queue">
-        <i class="fas fa-plus"></i>
-      </button>
-      <button class="favorite-btn active" onclick="removeFavoriteById('${escapeHtml(fav.videoId)}')" title="Remove from favorites">
-        <i class="fas fa-star"></i>
-      </button>
-    </div>
-  `).join('');
+  favoritesListEl.innerHTML = favorites.map(fav =>
+    createSongCard(fav, { type: 'favorite' })
+  ).join('');
 }
 
 function addFavoriteToQueue(videoId) {
