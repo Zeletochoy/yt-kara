@@ -11,6 +11,7 @@
     "start": "node server/index.js",
     "dev": "nodemon server/index.js",
     "visual-test": "node dev/visual-test.js",
+    "visual-test:reactions": "node dev/visual-test-reactions.js",
     "visual-test:pitch": "node dev/test-pitch-shifting.js",
     "visual-test:pitch:full": "node dev/test-pitch-comprehensive.js",
     "test": "node test/test-runner.js",
