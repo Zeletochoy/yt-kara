@@ -13,6 +13,25 @@ const userNameInput = document.getElementById('user-name');
 let isSearching = false;
 
 // Security: HTML escaping for XSS prevention
+//
+// This function escapes potentially dangerous HTML characters to prevent XSS attacks.
+// It's critical to call this on ALL user-controlled data before inserting into innerHTML.
+//
+// Why we need this:
+// - YouTube video titles can contain malicious HTML/JavaScript
+// - User names entered by clients could contain scripts
+// - Without escaping, code like <script>alert('XSS')</script> would execute
+//
+// How it works:
+// - Converts < to &lt; (prevents opening tags)
+// - Converts > to &gt; (prevents closing tags)
+// - Converts & to &amp; (prevents entity injection)
+// - Converts quotes to prevent attribute injection
+//
+// Example:
+//   Input:  <script>alert('XSS')</script>
+//   Output: &lt;script&gt;alert(&#039;XSS&#039;)&lt;/script&gt;
+//   Result: Displays as text instead of executing
 function escapeHtml(unsafe) {
   if (unsafe === null || unsafe === undefined) return '';
   return String(unsafe)
@@ -24,6 +43,16 @@ function escapeHtml(unsafe) {
 }
 
 // HTML Generation: Reusable song card component
+//
+// Centralizes HTML generation for song displays to:
+// 1. Reduce code duplication (~80 lines eliminated)
+// 2. Ensure consistent XSS protection across all displays
+// 3. Maintain uniform styling and behavior
+// 4. Make changes easier (modify once, applies everywhere)
+//
+// XSS Protection: All song data (title, thumbnail, etc.) is passed through
+// escapeHtml() before insertion into HTML. This happens automatically for
+// all card types (queue, history, search, favorite).
 function createSongCard(song, options = {}) {
   const {
     type = 'default', // 'queue', 'history', 'search', 'favorite'

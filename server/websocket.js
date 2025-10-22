@@ -11,6 +11,20 @@ let previousSongId = null;
 let lastSongId = null;
 
 // Input validation helpers
+//
+// Server-side validation is critical for security. Never trust client input!
+//
+// Why validate server-side:
+// - Clients can be manipulated (browser console, modified code, etc.)
+// - Malicious clients might send crafted payloads
+// - Prevents crashes from malformed data
+// - Provides clear error messages
+//
+// Validation strategy:
+// - Type checking: Ensure correct data types
+// - Length limits: Prevent abuse (200 char max for searches)
+// - Required fields: Ensure all necessary data is present
+// - Unicode support: Allow international characters (Japanese, emoji, etc.)
 function validateSearchQuery(query) {
   if (!query || typeof query !== 'string') {
     return { valid: false, error: 'Query must be a non-empty string' };

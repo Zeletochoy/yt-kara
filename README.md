@@ -133,6 +133,39 @@ npm start  # from source
 - Save favorite songs
 - Basic playback controls
 
+## ⚙️ Configuration
+
+### Environment Variables
+
+YT-Kara supports the following environment variables:
+
+```bash
+# Server Configuration
+PORT=8080                    # Server port (default: 8080)
+ENABLE_TUNNEL=false          # Enable localtunnel for external access
+
+# Logging Configuration
+LOG_LEVEL=INFO               # Log verbosity: ERROR, WARN, INFO, DEBUG (default: INFO)
+```
+
+**Log Levels:**
+- `ERROR`: Only critical errors
+- `WARN`: Warnings and errors
+- `INFO`: General information, warnings, and errors (recommended)
+- `DEBUG`: Detailed debugging information (verbose)
+
+Example with custom settings:
+```bash
+LOG_LEVEL=DEBUG PORT=3000 npm start
+```
+
+### Data Persistence
+
+YT-Kara stores data in the `data/` directory:
+- `data/session-state.json` - Queue, history, and playback state
+- `data/cache/` - Cached video files (auto-managed)
+- `data/cookies.txt` - YouTube authentication cookies (auto-generated)
+
 ## 🛠️ Technical Stuff
 
 Built with:
@@ -145,6 +178,16 @@ Files live in:
 - `server/` - Backend stuff
 - `public/` - Frontend stuff
 - `data/` - Saved queues and cookies
+
+### Security
+
+YT-Kara includes several security measures:
+- **XSS Prevention**: All user-controlled data (song titles, user names) is HTML-escaped before rendering
+- **Input Validation**: WebSocket messages are validated server-side to prevent malformed data
+- **Unicode Support**: Full support for international characters (Japanese, Chinese, Arabic, emoji)
+- **Cache Protection**: Grace period prevents deletion of actively streaming files
+
+See [Security Documentation](docs/security.md) for more details.
 
 ## 🐛 Common Issues
 
