@@ -23,6 +23,17 @@ let toneInitialized = false;
 let pitchShifter = null;
 let mediaElementSource = null;
 
+// Security: HTML escaping for XSS prevention
+function escapeHtml(unsafe) {
+  if (unsafe === null || unsafe === undefined) return '';
+  return String(unsafe)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+
 // Initialize
 document.addEventListener('DOMContentLoaded', () => {
   setupConnection();
@@ -672,10 +683,10 @@ function updateQueue(queue) {
 
   queueList.innerHTML = queue.slice(0, 5).map(item => `
     <div class="queue-item">
-      <img src="${item.thumbnail}" alt="">
+      <img src="${escapeHtml(item.thumbnail)}" alt="">
       <div class="queue-item-info">
-        <div class="queue-item-title">${item.title}</div>
-        <div class="queue-item-meta">Added by ${item.addedBy}</div>
+        <div class="queue-item-title">${escapeHtml(item.title)}</div>
+        <div class="queue-item-meta">Added by ${escapeHtml(item.addedBy)}</div>
       </div>
     </div>
   `).join('');

@@ -55,8 +55,7 @@
     "qrcode": "^1.5.4",
     "qrcodejs2": "^0.0.2",
     "tone": "^15.1.22",
-    "ws": "^8.16.0",
-    "youtubei.js": "^10.3.0"
+    "ws": "^8.16.0"
   },
   "devDependencies": {
     "@eslint/js": "^9.36.0",

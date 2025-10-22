@@ -10,6 +10,7 @@ class CacheManager {
     this.downloadQueue = []; // Array of videoIds to download
     this.downloading = null; // Currently downloading videoId
     this.downloadPromises = new Map(); // Map<videoId, Promise>
+    this.lastAccessedAt = new Map(); // Map<videoId, timestamp> for tracking file access
 
     // Ensure cache directory exists
     if (!fs.existsSync(this.cacheDir)) {
@@ -267,8 +268,20 @@ class CacheManager {
       return null;
     }
 
+    // Track access time for safe cleanup
+    this.lastAccessedAt.set(videoId, Date.now());
+
     const videoDir = path.join(this.cacheDir, videoId);
     return path.join(videoDir, metadata.videoFile);
+  }
+
+  // Check if video is safe to delete (not accessed recently)
+  isSafeToDelete(videoId, gracePeriodMs = 60000) {
+    const lastAccess = this.lastAccessedAt.get(videoId);
+    if (!lastAccess) {
+      return true; // Never accessed, safe to delete
+    }
+    return Date.now() - lastAccess > gracePeriodMs;
   }
 }
 

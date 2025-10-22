@@ -9,7 +9,12 @@ class SessionState {
     this.stateFile = path.join(__dirname, '..', 'data', stateFileName);
     this.ensureDataDirectory();
     this.loadState();
-    this.saveInterval = setInterval(() => this.saveState(), 5000); // Auto-save every 5 seconds
+    this.saveInterval = setInterval(() => {
+      // Only save if state has changed
+      if (this.dirty) {
+        this.saveState();
+      }
+    }, 5000); // Auto-save every 5 seconds
   }
 
   ensureDataDirectory() {
@@ -34,6 +39,7 @@ class SessionState {
         this.nextId = saved.nextId || 1;
         this.volume = saved.volume !== undefined ? saved.volume : 100;
         this.pitch = 0;
+        this.dirty = false; // Track if state has changed since last save
 
         console.log('✓ Restored previous session state');
       } else {
@@ -57,6 +63,7 @@ class SessionState {
       };
 
       fs.writeFileSync(this.stateFile, JSON.stringify(stateToSave, null, 2));
+      this.dirty = false; // Clear dirty flag after successful save
     } catch (error) {
       console.error('Failed to save state:', error);
     }
@@ -72,6 +79,7 @@ class SessionState {
     this.nextId = 1;
     this.volume = 100;
     this.pitch = 0;
+    this.dirty = false;
   }
 
   resetQueue() {
@@ -79,12 +87,14 @@ class SessionState {
     this.currentSong = null;
     this.currentTime = 0;
     this.isPlaying = false;
-    this.saveState();
+    this.dirty = true;
+    this.saveState(); // Save immediately for critical changes
   }
 
   resetHistory() {
     this.history = [];
-    this.saveState();
+    this.dirty = true;
+    this.saveState(); // Save immediately for critical changes
   }
 
   addSong(song, clientId) {
@@ -99,7 +109,8 @@ class SessionState {
       addedAt: Date.now()
     };
     this.queue.push(queueItem);
-    this.saveState();
+    this.dirty = true;
+    this.saveState(); // Save immediately for critical changes
     return queueItem;
   }
 
@@ -107,7 +118,8 @@ class SessionState {
     const index = this.queue.findIndex(item => item.id === queueId);
     if (index !== -1) {
       const removed = this.queue.splice(index, 1)[0];
-      this.saveState();
+      this.dirty = true;
+      this.saveState(); // Save immediately for critical changes
       return removed;
     }
     return null;
@@ -120,7 +132,8 @@ class SessionState {
     }
     const [item] = this.queue.splice(fromIndex, 1);
     this.queue.splice(toIndex, 0, item);
-    this.saveState();
+    this.dirty = true;
+    this.saveState(); // Save immediately for critical changes
     return true;
   }
 
@@ -138,14 +151,16 @@ class SessionState {
       this.currentTime = 0;
       this.isPlaying = true;
       this.pitch = 0; // Reset pitch when song changes
-      this.saveState();
+      this.dirty = true;
+      this.saveState(); // Save immediately for critical changes
       return this.currentSong;
     } else {
       this.currentSong = null;
       this.currentTime = 0;
       this.isPlaying = false;
       this.pitch = 0;
-      this.saveState();
+      this.dirty = true;
+      this.saveState(); // Save immediately for critical changes
       return null;
     }
   }
@@ -169,7 +184,8 @@ class SessionState {
       this.currentSong = previousSong;
       this.currentTime = 0;
       this.isPlaying = true;
-      this.saveState();
+      this.dirty = true;
+      this.saveState(); // Save immediately for critical changes
 
       return this.currentSong;
     }
@@ -210,7 +226,8 @@ class SessionState {
 
   setVolume(volume) {
     this.volume = Math.max(0, Math.min(100, volume));
-    this.saveState();
+    this.dirty = true;
+    this.saveState(); // Save immediately for settings changes
   }
 
   setPitch(pitch) {

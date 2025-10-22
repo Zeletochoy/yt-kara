@@ -9,6 +9,38 @@ const lastReactionTime = new Map(); // Throttle reactions per client
 let previousSongId = null;
 let lastSongId = null;
 
+// Input validation helpers
+function validateSearchQuery(query) {
+  if (!query || typeof query !== 'string') {
+    return { valid: false, error: 'Query must be a non-empty string' };
+  }
+  if (query.length > 200) {
+    return { valid: false, error: 'Query too long (max 200 characters)' };
+  }
+  return { valid: true };
+}
+
+function validateSong(song) {
+  if (!song || typeof song !== 'object') {
+    return { valid: false, error: 'Song must be an object' };
+  }
+  if (!song.videoId || typeof song.videoId !== 'string') {
+    return { valid: false, error: 'Song must have a valid videoId' };
+  }
+  if (!song.title || typeof song.title !== 'string') {
+    return { valid: false, error: 'Song must have a valid title' };
+  }
+  return { valid: true };
+}
+
+function validateAndSanitizeName(name) {
+  if (!name || typeof name !== 'string') {
+    return '';
+  }
+  // Just trim whitespace - allow any length, all Unicode (Japanese, emoji, etc.)
+  return name.trim();
+}
+
 function setupWebSocket(wss) {
   wss.on('connection', (ws) => {
     const clientId = `client-${clientIdCounter++}`;
@@ -82,6 +114,14 @@ function setupWebSocket(wss) {
 async function handleMessage(wss, ws, clientId, message) {
   switch (message.type) {
   case 'SEARCH': {
+    const validation = validateSearchQuery(message.query);
+    if (!validation.valid) {
+      ws.send(JSON.stringify({
+        type: 'ERROR',
+        message: validation.error
+      }));
+      break;
+    }
     const results = await youtube.search(message.query);
     ws.send(JSON.stringify({
       type: 'SEARCH_RESULTS',
@@ -90,27 +130,33 @@ async function handleMessage(wss, ws, clientId, message) {
     break;
   }
 
-  case 'ADD_SONG':
-    // Message should contain the full song info from search results
-    if (message.song) {
-      state.addSong(message.song, clientId);
-
-      // Prefetch the URL for this song
-      youtube.prefetchVideoUrl(message.song.videoId);
-
-      // If no song is playing, start playing
-      if (!state.currentSong) {
-        state.playNext();
-
-        // Prefetch the next song if there is one
-        if (state.queue.length > 0) {
-          youtube.prefetchVideoUrl(state.queue[0].videoId);
-        }
-      }
-
-      broadcastState(wss);
+  case 'ADD_SONG': {
+    const validation = validateSong(message.song);
+    if (!validation.valid) {
+      ws.send(JSON.stringify({
+        type: 'ERROR',
+        message: validation.error
+      }));
+      break;
     }
+    state.addSong(message.song, clientId);
+
+    // Prefetch the URL for this song
+    youtube.prefetchVideoUrl(message.song.videoId);
+
+    // If no song is playing, start playing
+    if (!state.currentSong) {
+      state.playNext();
+
+      // Prefetch the next song if there is one
+      if (state.queue.length > 0) {
+        youtube.prefetchVideoUrl(state.queue[0].videoId);
+      }
+    }
+
+    broadcastState(wss);
     break;
+  }
 
   case 'REMOVE_SONG':
     state.removeSong(message.queueId);
@@ -159,7 +205,7 @@ async function handleMessage(wss, ws, clientId, message) {
     break;
 
   case 'UPDATE_NAME': {
-    const clientName = message.name || '';
+    const clientName = validateAndSanitizeName(message.name);
     clientNames.set(clientId, clientName);
     state.updateClientName(clientId, clientName);
     broadcastState(wss);
@@ -263,7 +309,7 @@ function manageCacheForCurrentState() {
     // Keep all queued songs
     currentState.queue.forEach(song => toKeep.add(song.videoId));
 
-    // Delete everything else
+    // Delete everything else (with grace period to avoid deleting active streams)
     const fs = require('fs');
     const path = require('path');
     const cacheDir = path.join(__dirname, '..', 'data', 'cache');
@@ -271,7 +317,7 @@ function manageCacheForCurrentState() {
     if (fs.existsSync(cacheDir)) {
       const allCached = fs.readdirSync(cacheDir);
       allCached.forEach(videoId => {
-        if (!toKeep.has(videoId)) {
+        if (!toKeep.has(videoId) && cacheManager.isSafeToDelete(videoId)) {
           cacheManager.deleteVideo(videoId);
         }
       });

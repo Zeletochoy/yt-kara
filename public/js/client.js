@@ -12,6 +12,17 @@ const userNameInput = document.getElementById('user-name');
 // Search state
 let isSearching = false;
 
+// Security: HTML escaping for XSS prevention
+function escapeHtml(unsafe) {
+  if (unsafe === null || unsafe === undefined) return '';
+  return String(unsafe)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+
 // Tab handling
 const tabs = document.querySelectorAll('.tab');
 const panels = document.querySelectorAll('.tab-panel');
@@ -249,17 +260,17 @@ function updateUI(state) {
     currentSongEl.innerHTML = `
       <h3>Now Playing</h3>
       <div class="now-playing-card">
-        <img src="${state.currentSong.thumbnail}" alt="" class="now-playing-thumbnail">
-        <div class="song-title">${state.currentSong.title}</div>
+        <img src="${escapeHtml(state.currentSong.thumbnail)}" alt="" class="now-playing-thumbnail">
+        <div class="song-title">${escapeHtml(state.currentSong.title)}</div>
       </div>
     `;
 
     // Update now playing in remote tab
     nowPlayingEl.innerHTML = `
       <div class="now-playing-card">
-        <img src="${state.currentSong.thumbnail}" alt="" class="now-playing-thumbnail">
+        <img src="${escapeHtml(state.currentSong.thumbnail)}" alt="" class="now-playing-thumbnail">
         <div class="now-playing-info">
-          <div class="now-playing-title">${state.currentSong.title}</div>
+          <div class="now-playing-title">${escapeHtml(state.currentSong.title)}</div>
         </div>
       </div>
     `;
@@ -276,10 +287,10 @@ function updateUI(state) {
     queueListEl.innerHTML = state.queue.map((item, index) => `
       <div class="song-card queue-item" data-index="${index}" draggable="true">
         <div class="drag-handle"><i class="fas fa-grip-vertical"></i></div>
-        <img src="${item.thumbnail}" alt="" class="song-thumbnail">
+        <img src="${escapeHtml(item.thumbnail)}" alt="" class="song-thumbnail">
         <div class="song-info">
-          <div class="song-title">${item.title}</div>
-          <div class="song-meta">Added by ${item.addedBy || 'Unknown'}</div>
+          <div class="song-title">${escapeHtml(item.title)}</div>
+          <div class="song-meta">Added by ${escapeHtml(item.addedBy || 'Unknown')}</div>
         </div>
         <button class="remove-btn" onclick="removeFromQueue(${item.id})" title="Remove from queue"><i class="fas fa-times"></i></button>
       </div>
@@ -295,12 +306,12 @@ function updateUI(state) {
   if (state.history && state.history.length > 0) {
     historyList.innerHTML = state.history.reverse().map(item => `
       <div class="song-card">
-        <img src="${item.thumbnail}" alt="" class="song-thumbnail">
+        <img src="${escapeHtml(item.thumbnail)}" alt="" class="song-thumbnail">
         <div class="song-info">
-          <div class="song-title">${item.title}</div>
+          <div class="song-title">${escapeHtml(item.title)}</div>
           <div class="song-meta">Played ${getRelativeTime(item.playedAt)}</div>
         </div>
-        <button class="song-action" onclick="addFromHistory('${item.videoId}', '${encodeURIComponent(item.title)}', '${encodeURIComponent(item.thumbnail)}', ${item.duration || 0})" title="Add this song to the queue again">Add Again</button>
+        <button class="song-action" onclick="addFromHistory('${escapeHtml(item.videoId)}', '${encodeURIComponent(item.title)}', '${encodeURIComponent(item.thumbnail)}', ${item.duration || 0})" title="Add this song to the queue again">Add Again</button>
       </div>
     `).join('');
   } else {
@@ -325,17 +336,17 @@ function displaySearchResults(results) {
     const isFav = isFavorite(item.videoId);
     return `
     <div class="song-card">
-      <img src="${item.thumbnail}" alt="" class="song-thumbnail">
+      <img src="${escapeHtml(item.thumbnail)}" alt="" class="song-thumbnail">
       <div class="song-info clickable" onclick="addToQueue(${index})" title="Click to add to queue">
-        <div class="song-title">${item.title}</div>
+        <div class="song-title">${escapeHtml(item.title)}</div>
         <div class="song-meta">
-          ${item.channel} • ${formatTime(item.duration)}
-          <a href="https://www.youtube.com/watch?v=${item.videoId}" target="_blank" class="youtube-link" onclick="event.stopPropagation()" title="Watch on YouTube">
+          ${escapeHtml(item.channel)} • ${formatTime(item.duration)}
+          <a href="https://www.youtube.com/watch?v=${escapeHtml(item.videoId)}" target="_blank" class="youtube-link" onclick="event.stopPropagation()" title="Watch on YouTube">
             <i class="fab fa-youtube"></i>
           </a>
         </div>
       </div>
-      <button class="favorite-btn ${isFav ? 'active' : ''}" data-video-id="${item.videoId}" data-index="${index}" title="${isFav ? 'Remove from favorites' : 'Add to favorites'}">
+      <button class="favorite-btn ${isFav ? 'active' : ''}" data-video-id="${escapeHtml(item.videoId)}" data-index="${index}" title="${isFav ? 'Remove from favorites' : 'Add to favorites'}">
         <i class="fas fa-star"></i>
       </button>
     </div>
@@ -661,15 +672,15 @@ function displayFavorites() {
 
   favoritesListEl.innerHTML = favorites.map(fav => `
     <div class="song-card">
-      <img src="${fav.thumbnail}" alt="" class="song-thumbnail">
+      <img src="${escapeHtml(fav.thumbnail)}" alt="" class="song-thumbnail">
       <div class="song-info">
-        <div class="song-title">${fav.title}</div>
-        <div class="song-meta">${fav.artist || 'Unknown Artist'}</div>
+        <div class="song-title">${escapeHtml(fav.title)}</div>
+        <div class="song-meta">${escapeHtml(fav.artist || 'Unknown Artist')}</div>
       </div>
-      <button class="add-btn" onclick="addFavoriteToQueue('${fav.videoId}')" title="Add to queue">
+      <button class="add-btn" onclick="addFavoriteToQueue('${escapeHtml(fav.videoId)}')" title="Add to queue">
         <i class="fas fa-plus"></i>
       </button>
-      <button class="favorite-btn active" onclick="removeFavoriteById('${fav.videoId}')" title="Remove from favorites">
+      <button class="favorite-btn active" onclick="removeFavoriteById('${escapeHtml(fav.videoId)}')" title="Remove from favorites">
         <i class="fas fa-star"></i>
       </button>
     </div>
