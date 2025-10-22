@@ -44,7 +44,7 @@ class YouTubeService {
     try {
       // Export cookies using yt-dlp (will prompt for keychain once)
       await execPromise(
-        `yt-dlp --cookies-from-browser chrome --cookies "${this.cookiesFile}" --skip-download "https://www.youtube.com/watch?v=dQw4w9WgXcQ"`
+        `yt-dlp --extractor-args "youtube:player_js_version=actual" --cookies-from-browser chrome --cookies "${this.cookiesFile}" --skip-download "https://www.youtube.com/watch?v=dQw4w9WgXcQ"`
       );
 
       if (fs.existsSync(this.cookiesFile)) {
@@ -61,6 +61,13 @@ class YouTubeService {
       return '';
     }
     return ' --cookies-from-browser chrome';
+  }
+
+  getCommonArgs() {
+    // Always include extractor args for YouTube compatibility
+    const extractorArgs = ' --extractor-args "youtube:player_js_version=actual"';
+    const cookiesArg = this.getCookiesArg();
+    return extractorArgs + cookiesArg;
   }
 
 
@@ -81,13 +88,13 @@ class YouTubeService {
         // Get separate video and audio URLs for HD playback
         logger.debug('Getting HD streams', { videoId });
 
-        const cookiesArg = this.getCookiesArg();
+        const commonArgs = this.getCommonArgs();
 
         // Run all three yt-dlp commands in parallel for better performance
         const [videoResult, audioResult, infoResult] = await Promise.all([
           // Get video URL with codec info
           execPromise(
-            `yt-dlp${cookiesArg} -f "bestvideo[height<=720][vcodec^=avc]/bestvideo[height<=720]" --print "%(url)s|%(vcodec)s|%(ext)s" --no-warnings "${url}"`,
+            `yt-dlp${commonArgs} -f "bestvideo[height<=720][vcodec^=avc]/bestvideo[height<=720]" --print "%(url)s|%(vcodec)s|%(ext)s" --no-warnings "${url}"`,
             {
               maxBuffer: 10 * 1024 * 1024,
               timeout: 30000
@@ -95,7 +102,7 @@ class YouTubeService {
           ),
           // Get audio URL with codec info
           execPromise(
-            `yt-dlp${cookiesArg} -f "bestaudio[ext=m4a]/bestaudio" --print "%(url)s|%(acodec)s|%(ext)s" --no-warnings "${url}"`,
+            `yt-dlp${commonArgs} -f "bestaudio[ext=m4a]/bestaudio" --print "%(url)s|%(acodec)s|%(ext)s" --no-warnings "${url}"`,
             {
               maxBuffer: 10 * 1024 * 1024,
               timeout: 30000
@@ -103,7 +110,7 @@ class YouTubeService {
           ),
           // Get video metadata
           execPromise(
-            `yt-dlp${cookiesArg} -j --no-warnings "${url}"`,
+            `yt-dlp${commonArgs} -j --no-warnings "${url}"`,
             {
               maxBuffer: 10 * 1024 * 1024,
               timeout: 30000
@@ -142,9 +149,9 @@ class YouTubeService {
         return videoInfo;
       } else {
         // Original mode - get combined video+audio for standard playback
-        const cookiesArg = this.getCookiesArg();
+        const commonArgs = this.getCommonArgs();
         const { stdout: urlOutput } = await execPromise(
-          `yt-dlp${cookiesArg} -f "22/best[height>=720]/best" --get-url --no-warnings "${url}"`,
+          `yt-dlp${commonArgs} -f "22/best[height>=720]/best" --get-url --no-warnings "${url}"`,
           {
             maxBuffer: 10 * 1024 * 1024,
             timeout: 30000
@@ -153,7 +160,7 @@ class YouTubeService {
 
         // Then get the video metadata
         const { stdout: infoOutput } = await execPromise(
-          `yt-dlp${cookiesArg} -j --no-warnings "${url}"`,
+          `yt-dlp${commonArgs} -j --no-warnings "${url}"`,
           {
             maxBuffer: 10 * 1024 * 1024,
             timeout: 30000
@@ -221,9 +228,9 @@ class YouTubeService {
 
     try {
       // Use yt-dlp to search (limited to 10 results for speed)
-      const cookiesArg = this.getCookiesArg();
+      const commonArgs = this.getCommonArgs();
       const { stdout } = await execPromise(
-        `yt-dlp${cookiesArg} "ytsearch10:${query}" --flat-playlist -j --no-warnings`,
+        `yt-dlp${commonArgs} "ytsearch10:${query}" --flat-playlist -j --no-warnings`,
         { maxBuffer: 10 * 1024 * 1024 } // 10MB buffer
       );
 

@@ -150,7 +150,7 @@ class CacheManager {
     try {
       // Download single muxed file (video+audio together) for simpler playback
       const result = await execPromise(
-        `yt-dlp --cookies-from-browser chrome -f "bestvideo[height<=720][vcodec^=avc]+bestaudio[ext=m4a]/best[height<=720]" --print "%(title)s" --print "%(duration)s" --print after_move:"%(filepath)s" -o "${videoDir}/video.%(ext)s" --no-warnings "${url}"`,
+        `yt-dlp --extractor-args "youtube:player_js_version=actual" --cookies-from-browser chrome -f "bestvideo[height<=720][vcodec^=avc]+bestaudio[ext=m4a]/best[height<=720]" --print "%(title)s" --print "%(duration)s" --print after_move:"%(filepath)s" -o "${videoDir}/video.%(ext)s" --no-warnings "${url}"`,
         { maxBuffer: 10 * 1024 * 1024, timeout: 180000 }
       );
 
