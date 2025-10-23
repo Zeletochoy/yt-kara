@@ -102,7 +102,7 @@ class YouTubeService {
           ),
           // Get audio URL with codec info
           execPromise(
-            `yt-dlp${commonArgs} -f "bestaudio[ext=m4a]/bestaudio" --print "%(url)s|%(acodec)s|%(ext)s" --no-warnings "${url}"`,
+            `yt-dlp${commonArgs} -f "bestaudio[ext=m4a]/bestaudio/best" --print "%(url)s|%(acodec)s|%(ext)s" --no-warnings "${url}"`,
             {
               maxBuffer: 10 * 1024 * 1024,
               timeout: 30000
