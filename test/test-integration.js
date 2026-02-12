@@ -1,6 +1,5 @@
 const assert = require('assert');
 const fs = require('fs');
-const path = require('path');
 
 async function testIntegration() {
   console.log('Testing integration scenarios...');

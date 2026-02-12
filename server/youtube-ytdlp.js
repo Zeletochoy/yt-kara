@@ -56,11 +56,16 @@ class YouTubeService {
   }
 
   getCookiesArg() {
-    // In CI environments, don't try to use Chrome cookies (they don't exist)
+    // In CI environments, don't try to use cookies (they don't exist)
     if (process.env.CI) {
       return '';
     }
-    return ' --cookies-from-browser chrome';
+    // Use exported cookies file instead of --cookies-from-browser chrome,
+    // which causes YouTube to return degraded formats (storyboards only)
+    if (fs.existsSync(this.cookiesFile)) {
+      return ` --cookies "${this.cookiesFile}"`;
+    }
+    return '';
   }
 
   getCommonArgs() {

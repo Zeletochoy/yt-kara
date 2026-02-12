@@ -8,6 +8,7 @@ const execPromise = util.promisify(exec);
 class CacheManager {
   constructor() {
     this.cacheDir = path.join(__dirname, '..', 'data', 'cache');
+    this.cookiesFile = path.join(__dirname, '..', 'data', 'cookies.txt');
     this.downloadQueue = []; // Array of videoIds to download
     this.downloading = null; // Currently downloading videoId
     this.downloadPromises = new Map(); // Map<videoId, Promise>
@@ -149,8 +150,9 @@ class CacheManager {
 
     try {
       // Download single muxed file (video+audio together) for simpler playback
+      const cookiesArg = fs.existsSync(this.cookiesFile) ? ` --cookies "${this.cookiesFile}"` : '';
       const result = await execPromise(
-        `yt-dlp --extractor-args "youtube:player_js_version=actual" --cookies-from-browser chrome -f "bestvideo[height<=720][vcodec^=avc]+bestaudio[ext=m4a]/best[height<=720]" --print "%(title)s" --print "%(duration)s" --print after_move:"%(filepath)s" -o "${videoDir}/video.%(ext)s" --no-warnings "${url}"`,
+        `yt-dlp --extractor-args "youtube:player_js_version=actual"${cookiesArg} -f "bestvideo[height<=720][vcodec^=avc]+bestaudio[ext=m4a]/best[height<=720]" --print "%(title)s" --print "%(duration)s" --print after_move:"%(filepath)s" -o "${videoDir}/video.%(ext)s" --no-warnings "${url}"`,
         { maxBuffer: 10 * 1024 * 1024, timeout: 180000 }
       );
 

@@ -24,7 +24,7 @@ async function testInputValidation() {
             if (msg.type === 'SEARCH') {
               capturedMessage = msg;
             }
-          } catch (_error) {
+          } catch {
             // Ignore parse errors
           }
           return originalSend.call(this, data);
