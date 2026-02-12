@@ -142,7 +142,8 @@ YT-Kara supports the following environment variables:
 ```bash
 # Server Configuration
 PORT=8080                    # Server port (default: 8080)
-ENABLE_TUNNEL=false          # Enable localtunnel for external access
+ENABLE_TUNNEL=false          # Enable tunnel for external access (default: false)
+TUNNEL_PROVIDER=localtunnel  # Tunnel provider: localtunnel or cloudflare (default: localtunnel)
 
 # Logging Configuration
 LOG_LEVEL=INFO               # Log verbosity: ERROR, WARN, INFO, DEBUG (default: INFO)
@@ -212,10 +213,17 @@ See [Security Documentation](docs/security.md) for more details.
 - Firewall might be blocking port 8080
 - If your WiFi has AP Isolation (common in corporate/public WiFi), use tunnel mode:
   ```bash
+  # Using localtunnel (default, no extra install needed)
   ENABLE_TUNNEL=true yt-kara
-  # or: ENABLE_TUNNEL=true npm start
+
+  # Using Cloudflare Tunnel (faster & more reliable, requires cloudflared)
+  ENABLE_TUNNEL=true TUNNEL_PROVIDER=cloudflare yt-kara
   ```
-  This creates a public tunnel URL that bypasses network restrictions. The server will display a password (your public IP) that clients need to enter on first visit.
+  **localtunnel**: Built-in, no extra install. Creates a public URL with your public IP as password.
+  **Cloudflare Tunnel**: Faster and more reliable, no password needed. Requires `cloudflared`:
+  - macOS: `brew install cloudflared`
+  - Ubuntu/Debian: `sudo apt install cloudflared`
+  - Other: [Download from Cloudflare](https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/downloads/)
 
 **Looks janky**
 - Yeah, it's not pretty. PRs welcome if you want to make it look nice!

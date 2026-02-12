@@ -3,8 +3,8 @@ const http = require('http');
 const WebSocket = require('ws');
 const path = require('path');
 const os = require('os');
-const localtunnel = require('localtunnel');
 const logger = require('./logger');
+const { createTunnel } = require('./tunnel');
 
 require('./state');
 require('./youtube-ytdlp');
@@ -16,9 +16,10 @@ const wss = new WebSocket.Server({ server });
 
 const PORT = process.env.PORT || 8080;
 
-// Global tunnel URL and password (set when ENABLE_TUNNEL=true)
+// Global tunnel state (set when ENABLE_TUNNEL=true)
 let tunnelUrl = null;
 let tunnelPassword = null;
+let tunnelCleanup = null;
 
 // Serve static files
 app.use(express.static(path.join(__dirname, '..', 'public')));
@@ -113,34 +114,12 @@ server.listen(PORT, async () => {
   // Create tunnel if enabled
   if (process.env.ENABLE_TUNNEL === 'true') {
     try {
-      logger.info('Creating tunnel...');
-      const tunnel = await localtunnel({ port: PORT });
-      tunnelUrl = tunnel.url;
+      const result = await createTunnel(PORT);
+      tunnelUrl = result.url;
+      tunnelPassword = result.password;
+      tunnelCleanup = result.cleanup;
 
-      // Handle tunnel errors (crash if tunnel fails)
-      tunnel.on('error', (err) => {
-        logger.error('Tunnel error', { error: err.message });
-        process.exit(1);
-      });
-
-      tunnel.on('close', () => {
-        logger.info('Tunnel closed');
-      });
-
-      // Fetch the tunnel password (which is the server's public IP address)
-      try {
-        const https = require('https');
-        const ipResponse = await new Promise((resolve, reject) => {
-          https.get('https://ipv4.icanhazip.com', (res) => {
-            let data = '';
-            res.on('data', (chunk) => { data += chunk; });
-            res.on('end', () => resolve(data));
-          }).on('error', reject);
-        });
-        tunnelPassword = ipResponse.trim();
-      } catch (err) {
-        logger.warn('Could not fetch public IP for tunnel password', { error: err.message });
-      }
+      const provider = (process.env.TUNNEL_PROVIDER || 'localtunnel').toLowerCase();
 
       if (tunnelPassword) {
         logger.info(`
@@ -148,7 +127,7 @@ server.listen(PORT, async () => {
 
   Local:    http://localhost:${PORT}
   Network:  http://${localIP}:${PORT}
-  Tunnel:   ${tunnelUrl}
+  Tunnel:   ${tunnelUrl} (${provider})
   Password: ${tunnelPassword}
 
   Clients can connect by scanning the QR code.
@@ -160,10 +139,9 @@ server.listen(PORT, async () => {
 
   Local:   http://localhost:${PORT}
   Network: http://${localIP}:${PORT}
-  Tunnel:  ${tunnelUrl}
+  Tunnel:  ${tunnelUrl} (${provider})
 
   Clients can connect by scanning the QR code.
-  Note: First visitor will see a password prompt.
         `);
       }
     } catch (error) {
@@ -181,3 +159,18 @@ server.listen(PORT, async () => {
     `);
   }
 });
+
+// Graceful shutdown: clean up tunnel child process
+function gracefulShutdown(signal) {
+  logger.info(`Received ${signal}, shutting down...`);
+  if (tunnelCleanup) {
+    tunnelCleanup();
+  }
+  server.close(() => {
+    process.exit(0);
+  });
+  setTimeout(() => process.exit(1), 10000);
+}
+
+process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+process.on('SIGINT', () => gracefulShutdown('SIGINT'));

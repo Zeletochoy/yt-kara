@@ -171,7 +171,7 @@ logger.error('Failed to get video URL', {
 
 1. **Keep yt-dlp updated**: `pip3 install --upgrade yt-dlp`
 2. **Use on trusted networks**: Don't expose to public internet without authentication
-3. **Enable tunnel mode carefully**: ENABLE_TUNNEL creates a public URL - use with caution
+3. **Enable tunnel mode carefully**: ENABLE_TUNNEL creates a public URL - use with caution. Cloudflare tunnels (`TUNNEL_PROVIDER=cloudflare`) don't require a password but are still publicly accessible
 4. **Review logs**: Set LOG_LEVEL=DEBUG if you suspect issues
 
 ## Testing
