@@ -158,16 +158,6 @@ async function setup() {
     }
   }
 
-  // Install npm dependencies (only in interactive mode, not in postinstall)
-  console.log('\n📦 Installing Node.js dependencies...\n');
-  try {
-    await execPromise('npm install');
-    console.log('✅ Node.js dependencies installed');
-  } catch (error) {
-    console.error('❌ Failed to install Node.js dependencies:', error.message);
-    process.exit(1);
-  }
-
   console.log('\n✨ Setup complete! You can now run:');
   console.log('   npm start');
   console.log('\nThen open http://localhost:8080 in your browser');
