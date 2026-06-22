@@ -127,8 +127,8 @@ class WSConnection {
     this.send({ type: 'REMOVE_SONG', queueId });
   }
 
-  reorderQueue(fromIndex, toIndex) {
-    this.send({ type: 'REORDER_QUEUE', fromIndex, toIndex });
+  reorderQueue(songId, beforeId) {
+    this.send({ type: 'REORDER_QUEUE', songId, beforeId });
   }
 
   skipSong() {

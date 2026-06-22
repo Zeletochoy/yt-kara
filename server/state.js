@@ -126,12 +126,36 @@ class SessionState {
     return null;
   }
 
-  reorderQueue(fromIndex, toIndex) {
-    if (fromIndex < 0 || fromIndex >= this.queue.length ||
-        toIndex < 0 || toIndex >= this.queue.length) {
+  reorderQueue(songId, beforeId) {
+    const fromIndex = this.queue.findIndex(item => item.id === songId);
+    if (fromIndex === -1) {
+      logger.warn('Queue reorder aborted: moved song not found', { songId });
       return false;
     }
+
+    let toIndex;
+    if (beforeId === null || beforeId === undefined) {
+      toIndex = this.queue.length;
+    } else {
+      const targetIndex = this.queue.findIndex(item => item.id === beforeId);
+      if (targetIndex === -1) {
+        logger.warn('Queue reorder aborted: target song not found', { beforeId });
+        return false;
+      }
+      toIndex = targetIndex;
+    }
+
+    if (fromIndex === toIndex) {
+      return true; // No change needed
+    }
+
     const [item] = this.queue.splice(fromIndex, 1);
+
+    // Adjust index if we removed an item before the target
+    if (beforeId !== null && beforeId !== undefined && fromIndex < toIndex) {
+      toIndex--;
+    }
+
     this.queue.splice(toIndex, 0, item);
     this.dirty = true;
     this.saveState(); // Save immediately for critical changes

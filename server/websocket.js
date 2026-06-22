@@ -186,7 +186,7 @@ async function handleMessage(wss, ws, clientId, message) {
     break;
 
   case 'REORDER_QUEUE':
-    state.reorderQueue(message.fromIndex, message.toIndex);
+    state.reorderQueue(message.songId, message.beforeId);
     broadcastState(wss);
     break;
 
