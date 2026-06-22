@@ -119,7 +119,7 @@ server.listen(PORT, async () => {
       tunnelPassword = result.password;
       tunnelCleanup = result.cleanup;
 
-      const provider = (process.env.TUNNEL_PROVIDER || 'localtunnel').toLowerCase();
+      const provider = (process.env.TUNNEL_PROVIDER || 'cloudflare').toLowerCase();
 
       if (tunnelPassword) {
         logger.info(`
