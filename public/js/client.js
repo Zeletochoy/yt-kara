@@ -106,7 +106,7 @@ function createSongCard(song, options = {}) {
   // Special handling for queue items (draggable with handle)
   if (type === 'queue') {
     return `
-      <div class="song-card queue-item" data-index="${index}" draggable="true">
+      <div class="song-card queue-item" data-index="${index}" data-id="${song.id}" draggable="true">
         <div class="drag-handle"><i class="fas fa-grip-vertical"></i></div>
         <img src="${thumbnail}" alt="" class="song-thumbnail">
         <div class="song-info">
@@ -409,16 +409,18 @@ function updateUI(state) {
     nowPlayingEl.innerHTML = '<div class="empty-state"><p>No song playing</p></div>';
   }
 
-  // Update queue
-  if (state.queue.length > 0) {
-    queueListEl.innerHTML = state.queue.map((item, index) =>
-      createSongCard(item, { type: 'queue', index })
-    ).join('');
+  // Update queue (unless user is dragging)
+  if (!draggedItem && !touchItem) {
+    if (state.queue.length > 0) {
+      queueListEl.innerHTML = state.queue.map((item, index) =>
+        createSongCard(item, { type: 'queue', index })
+      ).join('');
 
-    // Set up drag and drop
-    setupQueueDragDrop();
-  } else {
-    queueListEl.innerHTML = '<div class="empty-state"><p>Queue is empty</p></div>';
+      // Set up drag and drop
+      setupQueueDragDrop();
+    } else {
+      queueListEl.innerHTML = '<div class="empty-state"><p>Queue is empty</p></div>';
+    }
   }
 
   // Update history
@@ -514,6 +516,7 @@ function getRelativeTime(timestamp) {
 // Drag and drop for queue reordering
 let draggedItem = null;
 let draggedIndex = null;
+let draggedSongId = null;
 let touchItem = null;
 const touchOffset = { x: 0, y: 0 };
 let placeholder = null;
@@ -526,12 +529,16 @@ function setupQueueDragDrop() {
     item.addEventListener('dragstart', (e) => {
       draggedItem = item;
       draggedIndex = index;
+      draggedSongId = parseInt(item.dataset.id, 10);
       item.classList.add('dragging');
       e.dataTransfer.effectAllowed = 'move';
     });
 
     item.addEventListener('dragend', () => {
       item.classList.remove('dragging');
+      draggedItem = null;
+      draggedIndex = null;
+      draggedSongId = null;
     });
 
     item.addEventListener('dragover', (e) => {
@@ -553,6 +560,7 @@ function setupQueueDragDrop() {
         e.preventDefault();
         touchItem = item;
         draggedIndex = index;
+        draggedSongId = parseInt(item.dataset.id, 10);
 
         const touch = e.touches[0];
         const rect = item.getBoundingClientRect();
@@ -586,12 +594,14 @@ function setupQueueDragDrop() {
 
   queueListEl.addEventListener('drop', (e) => {
     e.preventDefault();
-    if (draggedItem && draggedIndex !== null) {
+    if (draggedItem && draggedIndex !== null && draggedSongId !== null) {
       // Find the new position based on where the item was dropped
       const allItems = Array.from(queueListEl.querySelectorAll('.queue-item'));
       const newIndex = allItems.indexOf(draggedItem);
       if (newIndex !== -1 && newIndex !== draggedIndex) {
-        wsConnection.reorderQueue(draggedIndex, newIndex);
+        const nextItem = allItems[newIndex + 1];
+        const beforeId = nextItem ? parseInt(nextItem.dataset.id, 10) : null;
+        wsConnection.reorderQueue(draggedSongId, beforeId);
       }
     }
   });
@@ -664,14 +674,19 @@ document.addEventListener('touchend', (e) => {
   }
 
   // Send reorder command if position changed
-  if (draggedIndex !== null && newIndex !== -1 && newIndex !== draggedIndex) {
-    wsConnection.reorderQueue(draggedIndex, newIndex);
+  if (draggedIndex !== null && draggedSongId !== null && newIndex !== -1 && newIndex !== draggedIndex) {
+    const allItems = Array.from(queueListEl.querySelectorAll('.queue-item'));
+    const actualNewIndex = allItems.indexOf(touchItem);
+    const nextItem = allItems[actualNewIndex + 1];
+    const beforeId = nextItem ? parseInt(nextItem.dataset.id, 10) : null;
+    wsConnection.reorderQueue(draggedSongId, beforeId);
   }
 
   // Clean up
   touchItem = null;
   placeholder = null;
   draggedIndex = null;
+  draggedSongId = null;
 });
 
 function getDragAfterElement(container, y) {
