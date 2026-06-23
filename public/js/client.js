@@ -122,9 +122,9 @@ function createSongCard(song, options = {}) {
   // Special handling for search results (clickable info area, YouTube link)
   if (type === 'search') {
     return `
-      <div class="song-card">
+      <div class="song-card clickable" onclick="addToQueue(${index})">
         <img src="${thumbnail}" alt="" class="song-thumbnail">
-        <div class="song-info clickable" onclick="addToQueue(${index})" title="Click to add to queue">
+        <div class="song-info" title="Click to add to queue">
           <div class="song-title">${title}</div>
           <div class="song-meta">
             ${metaHtml}
