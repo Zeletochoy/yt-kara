@@ -1,4 +1,5 @@
 /* global Sortable */
+/* global navigator */
 // Client controller
 const searchInput = document.getElementById('search-input');
 const searchBtn = document.getElementById('search-btn');
@@ -509,6 +510,7 @@ function getRelativeTime(timestamp) {
 }
 
 // Drag and drop for queue reordering (using SortableJS)
+const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
 let sortableInstance = null;
 let isDraggingQueue = false;
 let currentQueueState = [];
@@ -531,6 +533,7 @@ function setupQueueDragDrop() {
   }
 
   sortableInstance = new Sortable(queueListEl, {
+    handle: isTouchDevice ? '.drag-handle' : null, // Restrict to handle on touch devices to allow page scrolling!
     animation: 150,
     ghostClass: 'dragging', // Reuse the existing CSS class for the ghost/dragged element
     filter: '.remove-btn',  // Prevent dragging when clicking the remove button
