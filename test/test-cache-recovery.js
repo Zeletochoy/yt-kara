@@ -2,12 +2,13 @@ const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
 const cacheManager = require('../server/cache-manager');
+const paths = require('../server/paths');
 
 async function testCacheRecovery() {
   console.log('Testing cache error recovery...');
 
   const testVideoId = 'test-video-123';
-  const cacheDir = path.join(__dirname, '..', 'data', 'cache', testVideoId);
+  const cacheDir = path.join(paths.getCacheDir(), testVideoId);
 
   try {
     // Clean up test cache before starting
