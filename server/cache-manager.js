@@ -3,21 +3,17 @@ const util = require('util');
 const fs = require('fs');
 const path = require('path');
 const logger = require('./logger');
+const paths = require('./paths');
 const execPromise = util.promisify(exec);
 
 class CacheManager {
   constructor() {
-    this.cacheDir = path.join(__dirname, '..', 'data', 'cache');
-    this.cookiesFile = path.join(__dirname, '..', 'data', 'cookies.txt');
+    this.cacheDir = paths.getCacheDir();
+    this.cookiesFile = path.join(paths.getDataDir(), 'cookies.txt');
     this.downloadQueue = []; // Array of videoIds to download
     this.downloading = null; // Currently downloading videoId
     this.downloadPromises = new Map(); // Map<videoId, Promise>
     this.lastAccessedAt = new Map(); // Map<videoId, timestamp> for tracking file access
-
-    // Ensure cache directory exists
-    if (!fs.existsSync(this.cacheDir)) {
-      fs.mkdirSync(this.cacheDir, { recursive: true });
-    }
 
     this.processQueue();
   }

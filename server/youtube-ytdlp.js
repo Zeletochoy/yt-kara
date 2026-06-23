@@ -3,13 +3,14 @@ const logger = require('./logger');
 const util = require('util');
 const fs = require('fs');
 const path = require('path');
+const paths = require('./paths');
 const execPromise = util.promisify(exec);
 
 class YouTubeService {
   constructor() {
     this.urlCache = new Map();
     this.searchCache = new Map();
-    this.cookiesFile = path.join(__dirname, '..', 'data', 'cookies.txt');
+    this.cookiesFile = path.join(paths.getDataDir(), 'cookies.txt');
     this.checkYtDlp();
     this.setupCookies();
   }
@@ -28,18 +29,12 @@ class YouTubeService {
 
   async setupCookies() {
     if (fs.existsSync(this.cookiesFile)) {
-      logger.info('Using cached cookies from data/cookies.txt');
+      logger.info(`Using cached cookies from ${this.cookiesFile}`);
       return;
     }
 
     logger.info('Setting up YouTube cookies (one-time setup)');
     logger.info('You may be prompted to unlock your keychain ONCE');
-
-    // Ensure data directory exists
-    const dataDir = path.dirname(this.cookiesFile);
-    if (!fs.existsSync(dataDir)) {
-      fs.mkdirSync(dataDir, { recursive: true });
-    }
 
     try {
       // Export cookies using yt-dlp (will prompt for keychain once)
@@ -50,8 +45,8 @@ class YouTubeService {
       if (fs.existsSync(this.cookiesFile)) {
         logger.info('Cookies cached successfully');
       }
-    } catch {
-      logger.warn('Could not cache cookies - videos may be restricted');
+    } catch (error) {
+      logger.warn('Could not cache cookies - videos may be restricted', { error: error.message });
     }
   }
 

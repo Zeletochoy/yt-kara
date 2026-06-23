@@ -2,6 +2,7 @@ const { spawn } = require('child_process');
 const path = require('path');
 const fs = require('fs');
 const puppeteer = require('puppeteer');
+const paths = require('../server/paths');
 
 class TestHelper {
   static server = null;
@@ -11,7 +12,7 @@ class TestHelper {
     await TestHelper.killExistingServers();
 
     // Delete test state file for clean test environment (NOT the real session-state.json!)
-    const testStateFile = path.join(__dirname, '..', 'data', 'session-state.test.json');
+    const testStateFile = path.join(paths.getDataDir(), 'session-state.test.json');
     try {
       if (fs.existsSync(testStateFile)) {
         fs.unlinkSync(testStateFile);

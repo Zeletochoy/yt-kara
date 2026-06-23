@@ -1,14 +1,14 @@
 const fs = require('fs');
-const logger = require('./logger');
 const path = require('path');
+const logger = require('./logger');
+const paths = require('./paths');
 
 // Session state management
 class SessionState {
   constructor() {
     // Use separate state file for tests to avoid corrupting real session data
     const stateFileName = process.env.TEST_MODE ? 'session-state.test.json' : 'session-state.json';
-    this.stateFile = path.join(__dirname, '..', 'data', stateFileName);
-    this.ensureDataDirectory();
+    this.stateFile = path.join(paths.getDataDir(), stateFileName);
     this.loadState();
     this.saveInterval = setInterval(() => {
       // Only save if state has changed
@@ -16,13 +16,6 @@ class SessionState {
         this.saveState();
       }
     }, 5000); // Auto-save every 5 seconds
-  }
-
-  ensureDataDirectory() {
-    const dataDir = path.dirname(this.stateFile);
-    if (!fs.existsSync(dataDir)) {
-      fs.mkdirSync(dataDir, { recursive: true });
-    }
   }
 
   loadState() {
