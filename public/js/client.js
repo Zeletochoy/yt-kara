@@ -1,3 +1,4 @@
+/* global Sortable */
 // Client controller
 const searchInput = document.getElementById('search-input');
 const searchBtn = document.getElementById('search-btn');
@@ -410,16 +411,10 @@ function updateUI(state) {
   }
 
   // Update queue (unless user is dragging)
-  if (!draggedItem && !touchItem) {
-    if (state.queue.length > 0) {
-      queueListEl.innerHTML = state.queue.map((item, index) =>
-        createSongCard(item, { type: 'queue', index })
-      ).join('');
-
-      // Set up drag and drop
-      setupQueueDragDrop();
-    } else {
-      queueListEl.innerHTML = '<div class="empty-state"><p>Queue is empty</p></div>';
+  if (state.queue !== undefined) {
+    currentQueueState = state.queue;
+    if (!isDraggingQueue) {
+      renderQueue(currentQueueState);
     }
   }
 
@@ -513,195 +508,54 @@ function getRelativeTime(timestamp) {
   return `${Math.floor(hours / 24)}d ago`;
 }
 
-// Drag and drop for queue reordering
-let draggedItem = null;
-let draggedIndex = null;
-let draggedSongId = null;
-let touchItem = null;
-const touchOffset = { x: 0, y: 0 };
-let placeholder = null;
+// Drag and drop for queue reordering (using SortableJS)
+let sortableInstance = null;
+let isDraggingQueue = false;
+let currentQueueState = [];
 
-function setupQueueDragDrop() {
-  const items = document.querySelectorAll('.queue-item');
-
-  items.forEach((item, index) => {
-    // Desktop drag events
-    item.addEventListener('dragstart', (e) => {
-      draggedItem = item;
-      draggedIndex = index;
-      draggedSongId = parseInt(item.dataset.id, 10);
-      item.classList.add('dragging');
-      e.dataTransfer.effectAllowed = 'move';
-    });
-
-    item.addEventListener('dragend', () => {
-      item.classList.remove('dragging');
-      draggedItem = null;
-      draggedIndex = null;
-      draggedSongId = null;
-    });
-
-    item.addEventListener('dragover', (e) => {
-      e.preventDefault();
-      e.dataTransfer.dropEffect = 'move';
-
-      const afterElement = getDragAfterElement(queueListEl, e.clientY);
-      if (afterElement == null) {
-        queueListEl.appendChild(draggedItem);
-      } else {
-        queueListEl.insertBefore(draggedItem, afterElement);
-      }
-    });
-
-    // Mobile touch events
-    const handle = item.querySelector('.drag-handle');
-    if (handle) {
-      handle.addEventListener('touchstart', (e) => {
-        e.preventDefault();
-        touchItem = item;
-        draggedIndex = index;
-        draggedSongId = parseInt(item.dataset.id, 10);
-
-        const touch = e.touches[0];
-        const rect = item.getBoundingClientRect();
-        touchOffset.x = touch.clientX - rect.left;
-        touchOffset.y = touch.clientY - rect.top;
-
-        // Create placeholder
-        placeholder = item.cloneNode(true);
-        placeholder.style.opacity = '0.3';
-        placeholder.classList.add('placeholder');
-
-        // Style the dragged item
-        item.style.position = 'fixed';
-        item.style.zIndex = '1000';
-        item.style.width = rect.width + 'px';
-        item.style.left = (touch.clientX - touchOffset.x) + 'px';
-        item.style.top = (touch.clientY - touchOffset.y) + 'px';
-        item.classList.add('dragging');
-
-        // Insert placeholder
-        item.parentNode.insertBefore(placeholder, item.nextSibling);
-      });
-    }
-  });
-
-  // Add drop listener to the queue list itself for dropping at the end
-  queueListEl.addEventListener('dragover', (e) => {
-    e.preventDefault();
-    e.dataTransfer.dropEffect = 'move';
-  });
-
-  queueListEl.addEventListener('drop', (e) => {
-    e.preventDefault();
-    if (draggedItem && draggedIndex !== null && draggedSongId !== null) {
-      // Find the new position based on where the item was dropped
-      const allItems = Array.from(queueListEl.querySelectorAll('.queue-item'));
-      const newIndex = allItems.indexOf(draggedItem);
-      if (newIndex !== -1 && newIndex !== draggedIndex) {
-        const nextItem = allItems[newIndex + 1];
-        const beforeId = nextItem ? parseInt(nextItem.dataset.id, 10) : null;
-        wsConnection.reorderQueue(draggedSongId, beforeId);
-      }
-    }
-  });
+function renderQueue(queue) {
+  if (queue.length > 0) {
+    queueListEl.innerHTML = queue.map((item, index) =>
+      createSongCard(item, { type: 'queue', index })
+    ).join('');
+    setupQueueDragDrop();
+  } else {
+    queueListEl.innerHTML = '<div class="empty-state"><p>Queue is empty</p></div>';
+  }
 }
 
-// Global touch move and end handlers for mobile
-document.addEventListener('touchmove', (e) => {
-  if (!touchItem) return;
-  e.preventDefault();
+function setupQueueDragDrop() {
+  if (sortableInstance) {
+    sortableInstance.destroy();
+    sortableInstance = null;
+  }
 
-  const touch = e.touches[0];
-  touchItem.style.left = (touch.clientX - touchOffset.x) + 'px';
-  touchItem.style.top = (touch.clientY - touchOffset.y) + 'px';
+  sortableInstance = new Sortable(queueListEl, {
+    animation: 150,
+    ghostClass: 'dragging', // Reuse the existing CSS class for the ghost/dragged element
+    filter: '.remove-btn',  // Prevent dragging when clicking the remove button
+    preventOnFilter: false, // Allow the click event to propagate so the remove button still works
+    onStart: () => {
+      isDraggingQueue = true;
+    },
+    onEnd: (evt) => {
+      isDraggingQueue = false;
 
-  // Temporarily hide the dragged item to find element below
-  touchItem.style.pointerEvents = 'none';
-  const elemBelow = document.elementFromPoint(touch.clientX, touch.clientY);
-  touchItem.style.pointerEvents = '';
+      const songId = parseInt(evt.item.dataset.id, 10);
+      const nextItem = evt.item.nextElementSibling;
+      const beforeId = nextItem ? parseInt(nextItem.dataset.id, 10) : null;
 
-  // Check if we're over the queue list itself (for dropping at the end)
-  const queueItemBelow = elemBelow?.closest('.queue-item:not(.dragging):not(.placeholder)');
-  const isOverQueueList = elemBelow?.closest('#queue-list');
-
-  if (placeholder && isOverQueueList) {
-    if (queueItemBelow) {
-      const rect = queueItemBelow.getBoundingClientRect();
-      const midpoint = rect.top + rect.height / 2;
-
-      if (touch.clientY < midpoint) {
-        queueItemBelow.parentNode.insertBefore(placeholder, queueItemBelow);
+      if (evt.oldIndex !== evt.newIndex) {
+        wsConnection.reorderQueue(songId, beforeId);
       } else {
-        queueItemBelow.parentNode.insertBefore(placeholder, queueItemBelow.nextSibling);
+        // Position did not change, force re-render from server state to be clean
+        renderQueue(currentQueueState);
       }
-    } else {
-      // If no item below but we're over the queue list, append to the end
-      const allItems = Array.from(queueListEl.querySelectorAll('.queue-item:not(.dragging)'));
-      if (allItems.length > 0) {
-        const lastItem = allItems[allItems.length - 1];
-        const rect = lastItem.getBoundingClientRect();
-        if (touch.clientY > rect.bottom) {
-          queueListEl.appendChild(placeholder);
-        }
-      }
+    },
+    onUnchoose: () => {
+      isDraggingQueue = false;
     }
-  }
-});
-
-document.addEventListener('touchend', (e) => {
-  if (!touchItem) return;
-  e.preventDefault();
-
-  // Find the new index based on placeholder position
-  let newIndex = -1;
-  if (placeholder && placeholder.parentNode) {
-    const allItems = Array.from(queueListEl.children);
-    newIndex = allItems.indexOf(placeholder);
-  }
-
-  // Reset styles
-  touchItem.style.position = '';
-  touchItem.style.zIndex = '';
-  touchItem.style.width = '';
-  touchItem.style.left = '';
-  touchItem.style.top = '';
-  touchItem.classList.remove('dragging');
-
-  // Replace placeholder with item
-  if (placeholder && placeholder.parentNode) {
-    placeholder.parentNode.replaceChild(touchItem, placeholder);
-  }
-
-  // Send reorder command if position changed
-  if (draggedIndex !== null && draggedSongId !== null && newIndex !== -1 && newIndex !== draggedIndex) {
-    const allItems = Array.from(queueListEl.querySelectorAll('.queue-item'));
-    const actualNewIndex = allItems.indexOf(touchItem);
-    const nextItem = allItems[actualNewIndex + 1];
-    const beforeId = nextItem ? parseInt(nextItem.dataset.id, 10) : null;
-    wsConnection.reorderQueue(draggedSongId, beforeId);
-  }
-
-  // Clean up
-  touchItem = null;
-  placeholder = null;
-  draggedIndex = null;
-  draggedSongId = null;
-});
-
-function getDragAfterElement(container, y) {
-  const draggableElements = [...container.querySelectorAll('.queue-item:not(.dragging)')];
-
-  return draggableElements.reduce((closest, child) => {
-    const box = child.getBoundingClientRect();
-    const offset = y - box.top - box.height / 2;
-
-    if (offset < 0 && offset > closest.offset) {
-      return { offset: offset, element: child };
-    } else {
-      return closest;
-    }
-  }, { offset: Number.NEGATIVE_INFINITY }).element;
+  });
 }
 
 // Add song from history
