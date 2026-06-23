@@ -12,7 +12,7 @@ const TUNNEL_PROVIDERS = {
  * @returns {Promise<{ url: string, password: string|null, cleanup: () => void }>}
  */
 async function createTunnel(port) {
-  const provider = (process.env.TUNNEL_PROVIDER || 'localtunnel').toLowerCase();
+  const provider = (process.env.TUNNEL_PROVIDER || 'cloudflare').toLowerCase();
 
   if (!TUNNEL_PROVIDERS[provider]) {
     throw new Error(
@@ -60,72 +60,46 @@ async function createLocaltunnel(port) {
   };
 }
 
-function checkCloudflaredInstalled() {
-  try {
-    execSync('which cloudflared', { stdio: 'ignore' });
-    return true;
-  } catch {
-    return false;
-  }
-}
-
+// createCloudflareTunnel uses the cloudflared npm package to automatically
+// manage the binary and start the tunnel.
 async function createCloudflareTunnel(port) {
-  if (!checkCloudflaredInstalled()) {
-    throw new Error(
-      'cloudflared is not installed.\n\n' +
-      '  Install it with one of:\n' +
-      '  - brew install cloudflared           (macOS)\n' +
-      '  - sudo apt install cloudflared       (Ubuntu/Debian)\n' +
-      '  - Download from https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/downloads/\n\n' +
-      '  Or use TUNNEL_PROVIDER=localtunnel instead.'
-    );
+  const { Tunnel, bin, install } = require('cloudflared');
+  const fs = require('fs');
+
+  if (!fs.existsSync(bin)) {
+    logger.info('Installing cloudflared binary (this may take a moment)...');
+    await install(bin);
   }
 
   return new Promise((resolve, reject) => {
-    const child = spawn('cloudflared', ['tunnel', '--url', `http://localhost:${port}`], {
-      stdio: ['ignore', 'pipe', 'pipe']
-    });
-
+    const tunnel = Tunnel.quick(`http://localhost:${port}`);
     let resolved = false;
-    const urlRegex = /https?:\/\/[a-zA-Z0-9-]+\.trycloudflare\.com/;
 
     const timeout = setTimeout(() => {
       if (!resolved) {
         resolved = true;
-        child.kill('SIGTERM');
+        tunnel.process.kill('SIGTERM');
         reject(new Error('Timed out waiting for cloudflared to provide tunnel URL (30s)'));
       }
     }, 30000);
 
-    function handleOutput(data) {
-      const line = data.toString();
-      logger.debug('cloudflared', { output: line.trim() });
-      const match = line.match(urlRegex);
-      if (match && !resolved) {
+    tunnel.on('url', (url) => {
+      if (!resolved) {
         resolved = true;
         clearTimeout(timeout);
-        const url = match[0];
         logger.info('Cloudflare tunnel established', { url });
         resolve({
           url,
           password: null,
           cleanup: () => {
             logger.info('Shutting down cloudflared...');
-            child.kill('SIGTERM');
-            setTimeout(() => {
-              if (!child.killed) {
-                child.kill('SIGKILL');
-              }
-            }, 5000);
+            tunnel.process.kill('SIGTERM');
           }
         });
       }
-    }
+    });
 
-    child.stderr.on('data', handleOutput);
-    child.stdout.on('data', handleOutput);
-
-    child.on('error', (err) => {
+    tunnel.on('error', (err) => {
       if (!resolved) {
         resolved = true;
         clearTimeout(timeout);
@@ -133,7 +107,7 @@ async function createCloudflareTunnel(port) {
       }
     });
 
-    child.on('exit', (code) => {
+    tunnel.on('exit', (code) => {
       if (!resolved) {
         resolved = true;
         clearTimeout(timeout);
