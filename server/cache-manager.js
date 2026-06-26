@@ -145,10 +145,12 @@ class CacheManager {
     }
 
     try {
-      // Download single muxed file (video+audio together) for simpler playback
-      const cookiesArg = fs.existsSync(this.cookiesFile) ? ` --cookies "${this.cookiesFile}"` : '';
+      // Download single muxed file (video+audio together) for simpler playback.
+      // ponytail: no cookies — account cookies force a client that needs a GVS PO
+      // token (HTTP 403 on data download). Cookieless uses android_vr which works.
+      // Add a PO-token provider plugin only if age-restricted videos become needed.
       const result = await execPromise(
-        `yt-dlp --extractor-args "youtube:player_js_version=actual"${cookiesArg} -f "bestvideo[height<=720][vcodec^=avc]+bestaudio[ext=m4a]/best[height<=720]" --print "%(title)s" --print "%(duration)s" --print after_move:"%(filepath)s" -o "${videoDir}/video.%(ext)s" --no-warnings "${url}"`,
+        `yt-dlp -f "bestvideo[height<=720][vcodec^=avc]+bestaudio[ext=m4a]/best[height<=720]" --print "%(title)s" --print "%(duration)s" --print after_move:"%(filepath)s" -o "${videoDir}/video.%(ext)s" --no-warnings "${url}"`,
         { maxBuffer: 10 * 1024 * 1024, timeout: 180000 }
       );
 
