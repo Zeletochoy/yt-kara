@@ -84,7 +84,18 @@ app.get('/api/stream/:videoId', (req, res) => {
       return res.status(404).json({ error: 'Video not cached' });
     }
 
-    res.sendFile(filePath);
+    res.sendFile(filePath, { dotfiles: 'allow' }, error => {
+      if (error && !res.headersSent) {
+        logger.error('Video stream error', {
+          error: error.message,
+          videoId: req.params.videoId,
+          filePath
+        });
+        res.status(error.statusCode || 500).json({
+          error: 'Unable to stream video'
+        });
+      }
+    });
   } catch (error) {
     logger.error('Video stream error', { error: error.message, videoId: req.params.videoId });
     res.status(500).json({ error: true, message: error.message });
