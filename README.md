@@ -34,7 +34,21 @@ A karaoke web app thrown together for parties - plays YouTube videos on a TV whi
 - Python 3+ (for yt-dlp)
 - A computer connected to a TV
 
-### Quick Install (npm)
+### Clone from Source
+
+```bash
+# Clone the repository
+git clone https://github.com/Zeletochoy/yt-kara.git
+cd yt-kara
+
+# Install dependencies
+npm install
+
+# Start the application
+npm start
+```
+
+### Alternative: Install from npm
 
 ```bash
 # Install globally
@@ -73,37 +87,6 @@ docker build -t yt-kara .
 docker run -p 8080:8080 -v $(pwd)/data:/app/data yt-kara
 ```
 
-### Alternative: Clone from Source
-
-```bash
-# Clone it
-git clone https://github.com/Zeletochoy/yt-kara.git
-cd yt-kara
-
-# Install everything (includes yt-dlp)
-npm run setup
-
-# Start it
-npm start
-```
-
-### Manual Setup
-
-If automated setup fails:
-
-```bash
-# Install yt-dlp (the magic that makes this work)
-pip3 install yt-dlp
-# or: brew install yt-dlp (macOS)
-# or: sudo apt install yt-dlp (Ubuntu/Debian)
-
-# Install node stuff (if cloned from source)
-npm install
-
-# Run it
-npm start  # from source
-# or: yt-kara  # if installed globally
-```
 
 ## 🎮 How to Use
 
